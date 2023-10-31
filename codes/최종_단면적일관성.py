@@ -47,7 +47,7 @@ def calculate_inner_consistency(category, df, TARGET_VARIABLE):
 
 
 def calculate_consistency(csv_file_name):
-    OPENAI_API_KEY = "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"  # 여기에 실제 OpenAI API 키를 입력하십시오.
+    OPENAI_API_KEY = "sk-"  # 여기에 실제 OpenAI API 키를 입력하십시오.
     llm = initialize_openai(OPENAI_API_KEY)
     TARGET_VARIABLE = '성별'
     df = pd.read_csv(csv_file_name)
