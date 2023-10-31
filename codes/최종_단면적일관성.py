@@ -1,6 +1,7 @@
 import os
 import pandas as pd
 import warnings
+import openai as OpenAI
 warnings.filterwarnings(action='ignore')
 
 def initialize_openai(api_key):
@@ -9,9 +10,10 @@ def initialize_openai(api_key):
     return llm
 
 def get_category_counts(llm, unique_array):
-    result = llm(f"{unique_array}, classify this into minimum groups in forms like 'A / B' according to meanings without any comments. For example, ['F', 'M', 'Female'] into 'F, Female / M'.").strip()
-    lines = result.strip().split('\n')
+    response = llm(f"{unique_array}, classify this into minimum groups in forms like 'A / B' according to meanings without any comments. For example, ['F', 'M', 'Female'] into 'F, Female / M'.").strip()
+    lines = response.choices[0].text.strip().split('\n')
     #print(lines)
+    
     category_counts = {}
     for line in lines:
         categories = line.strip('[]').replace("'", "").split(' / ')
@@ -26,11 +28,11 @@ def get_category_counts(llm, unique_array):
     return categories, category_counts
 
 
-def calculate_inner_consistency(category, df, TARGET_VARIABLE):
+def calculate_inner_consistency(lines, df, TARGET_VARIABLE):
     total_weighted_percentage = 0
     total_weight = 0
     for line in lines:
-        line_values = eval(line)  # Assuming line is something like "['F', 'M']"
+        line_values = [x.strip() for x in line.strip('[]').split(',')]
         
         count_by_col = df[TARGET_VARIABLE].apply(lambda x: x if x in line_values else None).value_counts().dropna()
         
