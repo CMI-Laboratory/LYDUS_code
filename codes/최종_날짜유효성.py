@@ -10,7 +10,7 @@ get_ipython().system('pip install langchain')
 import os
 
 #@markdown https://platform.openai.com/account/api-keys
-OPENAI_API_KEY = "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" #@param {type:"string"}
+OPENAI_API_KEY = "sk" #@param {type:"string"}
 os.environ["OPENAI_API_KEY"] = OPENAI_API_KEY
 
 import pandas as pd
