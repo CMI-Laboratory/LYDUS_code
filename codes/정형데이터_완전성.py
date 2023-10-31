@@ -47,7 +47,7 @@ def evaluate_dataset_completeness(csv_path):
     dataframe = pd.read_csv(csv_path)
     
     # Identify the truly required columns based on prior understanding
-    truly_required_columns = ['변수 category', '변수명', '기록 날짜', '변수 타입', '환자 번호']
+    truly_required_columns = ['변수 category', '변수명', '기록 날짜', '값', '변수 타입', '환자 번호']
     
     # Calculate the overall completeness using the function
     completeness = calculate_completeness(dataframe, truly_required_columns)
