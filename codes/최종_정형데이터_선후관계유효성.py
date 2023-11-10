@@ -102,7 +102,7 @@ response = openai.ChatCompletion.create(
         {"role": "system", "content": system_prompt},
         {"role": "user", "content": unique_variables_string}
     ],
-    temperature=0.2,
+    temperature=0,
     max_tokens=256,
     top_p=1,
     frequency_penalty=0,
