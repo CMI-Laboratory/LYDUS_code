@@ -3,6 +3,7 @@
 
 # In[ ]:
 
+
 get_ipython().system('pip install openai')
 get_ipython().system('pip install langchain')
 
