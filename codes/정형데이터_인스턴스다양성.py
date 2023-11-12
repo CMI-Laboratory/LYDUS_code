@@ -3,7 +3,6 @@
 
 # In[ ]:
 
-
 import pandas as pd
 from collections import Counter
 from math import log
@@ -28,7 +27,7 @@ def calculate_class_instance_counts(class_values, instance_values):
     class_counts = df.groupby("Class").size().reset_index(name="Total_Count")
     
     weighted_instance_diversities = []
-    weighted_shannon_diversities = []
+    weighted_simpson_diversities = []
     total_items = len(class_values)
 
     def print_detail(class_value,instance_diversity,simpson_diversity_score, shannon_diversity):
@@ -55,7 +54,7 @@ def calculate_class_instance_counts(class_values, instance_values):
         
         
         weighted_instance_diversities.append(instance_diversity * total_count)
-        weighted_shannon_diversities.append(shannon_diversity * total_count)
+        weighted_simpson_diversities.append(simpson_diversity_score * total_count)
         
         # 클래스별 세부 지표      
         print_detail(class_value,instance_diversity,simpson_diversity_score, shannon_diversity)
@@ -64,10 +63,10 @@ def calculate_class_instance_counts(class_values, instance_values):
     results_df.to_csv('class_instance_diversity_results.csv', index=False)
     
     weighted_avg_instance_diversity = sum(weighted_instance_diversities) / total_items
-    weighted_avg_shannon_diversity = sum(weighted_shannon_diversities) / total_items
+    weighted_avg_simpson_diversity = sum(weighted_simpson_diversities) / total_items
     
     print(f"가중 평균 인스턴스 다양성: {weighted_avg_instance_diversity}")
-    print(f"가중 평균 인스턴스 샤논지수: {weighted_avg_shannon_diversity}\n")
+    print(f"가중 평균 인스턴스 심슨 다양성: {weighted_avg_simpson_diversity}\n")
     
   
         
@@ -79,4 +78,3 @@ def calculate_instance_diversity(csv):
     instance_values = df_target['환자ID']
     calculate_class_instance_counts(class_values, instance_values)
     
-
