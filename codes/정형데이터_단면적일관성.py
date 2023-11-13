@@ -14,7 +14,7 @@ import langchain
 from langchain.llms import OpenAI
 warnings.filterwarnings(action='ignore')
 
-OPENAI_API_KEY = "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" #@param {type:"string"}
+OPENAI_API_KEY = "" #@param {type:"string"}
 os.environ["OPENAI_API_KEY"] = OPENAI_API_KEY
 
 llm = OpenAI(model_name='text-davinci-003', temperature=0.9)
