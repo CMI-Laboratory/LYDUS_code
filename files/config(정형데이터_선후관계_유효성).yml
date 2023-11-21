@@ -1,0 +1,13 @@
+
+open_api_key: Your_api_key_here
+csv_path: /path_to/your_data.csv
+Variable_list:
+  Variable1: "Explanation for Variable1"
+  Variable2: "Explanation for Variable2"
+  Variable3: "Explanation for Variable3"
+  Variable4: "Explanation for Variable4"
+  Variable5: "Explanation for Variable5"
+
+# Put variables with explanations in dictionary format for example
+  # ADMITTIME: patient admission time 
+  # DISCHTIME: patient discharge time 
