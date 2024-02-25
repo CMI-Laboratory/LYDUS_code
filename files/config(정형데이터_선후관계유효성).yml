@@ -5,3 +5,9 @@ Variables:
     Description: "변수1에 대한 설명"
   - Variable_name: "변수2"
     Description: "변수2에 대한 설명"
+
+# For example, 
+# - Variable_name: "ADTM"
+#    Description: "Admission Time"
+#  - Variable_name: "DDTM"
+#    Description: "Discharge Time"
