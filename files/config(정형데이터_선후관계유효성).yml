@@ -1,0 +1,7 @@
+open_api_key: "YOUR_API_KEY_HERE"
+csv_path: "path/to/your/data.csv"
+Variables:
+  - Variable_name: "변수1"
+    Description: "변수1에 대한 설명"
+  - Variable_name: "변수2"
+    Description: "변수2에 대한 설명"
