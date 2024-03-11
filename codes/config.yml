@@ -1,0 +1,12 @@
+General_session_id: 1
+General_table_name: 20240125_df_standard_concat3.csv
+신뢰도_operation_type: manual
+신뢰도_automatic_num: 1
+신뢰도_target_variable: Creatinine
+신뢰도_gpt_model_type: gpt-4
+신뢰도_recommended_variable_num: 7
+신뢰도_splitnum: 2
+신뢰도_hidden_length1: 5
+신뢰도_hidden_length2: 4
+신뢰도_openai_key: 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
+범위유효성_boxplotnum: 10
