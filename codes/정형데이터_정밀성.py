@@ -35,12 +35,14 @@ from collections import Counter
 import math
 import re
 import warnings
+import random
 warnings.filterwarnings('ignore')
 print(torch.__version__)
 
 now1= datetime.datetime.now()
 
 config_yml_name = sys.argv[1]
+
 with open(f'{config_yml_name}',encoding='utf-8') as f:
     config_dict = yaml.load(f, Loader=yaml.FullLoader)
 
@@ -94,6 +96,18 @@ savepath1='LYDUS_results/'+str(session_id)+'/'+'granularity/'
 savepath2='LYDUS_results/'+str(session_id)+'/'+'granularity/histograms/'
 
 df=pd.read_csv(lab_table_name,low_memory=False)
+
+df['temp_값_float'] = pd.to_numeric(df['값'], errors='coerce')
+
+# Step 2: Filter out rows where the temporary column is NaN
+df_filtered_all_columns = df.dropna(subset=['temp_값_float'])
+
+# Step 3: Replace the original '값' column with the float-converted values and drop the temporary column
+df_filtered_all_columns['값'] = df_filtered_all_columns['temp_값_float']
+df = df_filtered_all_columns.drop(columns=['temp_값_float'])
+
+df.reset_index(inplace=True,drop=True)
+
 
 #df=df.sample(frac=0.01,replace=False)
 
