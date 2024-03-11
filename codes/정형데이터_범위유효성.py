@@ -29,6 +29,7 @@ from google.oauth2 import service_account
 import openai
 import matplotlib.pyplot as plt
 import warnings
+import random
 warnings.filterwarnings('ignore')
 print(torch.__version__)
 
@@ -47,6 +48,13 @@ patient_id = '환자 번호'
 charttime_column_name = '기록 날짜'
 
 df=pd.read_csv(lab_table_name,low_memory=False)
+
+unique_pid=list(set(df['환자 번호']))
+random.shuffle(unique_pid)
+unique_pid2=unique_pid[:len(unique_pid)//5]
+
+df=df[df['환자 번호'].isin(unique_pid2)]
+df.reset_index(inplace=True, drop=True)
 
 labellist=list(df.groupby(lab_table_label_column_name).count().sort_values(value_column_name,ascending=False).index[:100])
 itemlist=list(df.groupby(lab_table_item_column_name).count().sort_values(value_column_name,ascending=False).index[:100])
@@ -157,6 +165,10 @@ for i, ax in enumerate(axs.flat):
     ax.tick_params(axis='y',labelsize=14)
 plt.tight_layout()
 plt.savefig('LYDUS_results/'+str(session_id)+'/rangevalidity/botplots.png')
+
+
+now2=datetime.datetime.now()
+print(now2-now1)
 
 
 now2=datetime.datetime.now()
