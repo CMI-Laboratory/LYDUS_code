@@ -34,6 +34,7 @@ warnings.filterwarnings('ignore')
 print(torch.__version__)
 
 config_yml_name = sys.argv[1]
+
 with open(f'{config_yml_name}',encoding='utf-8') as f:
     config_dict = yaml.load(f, Loader=yaml.FullLoader)
 
@@ -49,12 +50,16 @@ charttime_column_name = '기록 날짜'
 
 df=pd.read_csv(lab_table_name,low_memory=False)
 
-unique_pid=list(set(df['환자 번호']))
-random.shuffle(unique_pid)
-unique_pid2=unique_pid[:len(unique_pid)//5]
+df['temp_값_float'] = pd.to_numeric(df['값'], errors='coerce')
 
-df=df[df['환자 번호'].isin(unique_pid2)]
-df.reset_index(inplace=True, drop=True)
+# Step 2: Filter out rows where the temporary column is NaN
+df_filtered_all_columns = df.dropna(subset=['temp_값_float'])
+
+# Step 3: Replace the original '값' column with the float-converted values and drop the temporary column
+df_filtered_all_columns['값'] = df_filtered_all_columns['temp_값_float']
+df = df_filtered_all_columns.drop(columns=['temp_값_float'])
+
+df.reset_index(inplace=True,drop=True)
 
 labellist=list(df.groupby(lab_table_label_column_name).count().sort_values(value_column_name,ascending=False).index[:100])
 itemlist=list(df.groupby(lab_table_item_column_name).count().sort_values(value_column_name,ascending=False).index[:100])
@@ -165,10 +170,6 @@ for i, ax in enumerate(axs.flat):
     ax.tick_params(axis='y',labelsize=14)
 plt.tight_layout()
 plt.savefig('LYDUS_results/'+str(session_id)+'/rangevalidity/botplots.png')
-
-
-now2=datetime.datetime.now()
-print(now2-now1)
 
 
 now2=datetime.datetime.now()
