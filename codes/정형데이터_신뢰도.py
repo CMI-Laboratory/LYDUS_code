@@ -56,7 +56,7 @@ session_id = config_dict['General_session_id']
 
 lab_table_item_column_name = '변수 ID'
 lab_table_label_column_name = '변수명'
-patient_id = '환자 번호'
+patient_id = '입원 번호'
 value_column_name = '값'
 charttime_column_name = '기록 날짜'
 
@@ -86,15 +86,21 @@ def query_gpt(target_variable, gpt_model_type, recommended_variable_num, labelte
     return aa
 
 df=pd.read_csv(lab_table_name,low_memory=False)
+df=df[df['변수 category']=='LABEVENTS']
+df.reset_index(inplace=True,drop=True)
 
-unique_pid=list(set(df['환자 번호']))
-random.shuffle(unique_pid)
-unique_pid2=unique_pid[:len(unique_pid)//100]
+df['temp_값_float'] = pd.to_numeric(df['값'], errors='coerce')
 
-df=df[df['환자 번호'].isin(unique_pid2)]
-df.reset_index(inplace=True, drop=True)
+# Step 2: Filter out rows where the temporary column is NaN
+df_filtered_all_columns = df.dropna(subset=['temp_값_float'])
 
-labellist=list(df.groupby(lab_table_label_column_name).count().sort_values(value_column_name,ascending=False).index[:100])
+# Step 3: Replace the original '값' column with the float-converted values and drop the temporary column
+df_filtered_all_columns['값'] = df_filtered_all_columns['temp_값_float']
+df = df_filtered_all_columns.drop(columns=['temp_값_float'])
+
+df.reset_index(inplace=True,drop=True)
+
+labellist=list(df.groupby(lab_table_label_column_name).count().sort_values(value_column_name,ascending=False).index[:200])
 
 labeltext=''
 for i in range(len(labellist)):
@@ -180,7 +186,7 @@ for iterr in range(iterations):
     locals()['{}'.format(target_variable)].dropna(inplace=True)
     locals()['{}'.format(target_variable)].reset_index(inplace=True,drop=True)
     locals()['{}'.format(target_variable)].columns=[patient_id,target_variable,charttime_column_name+'_target']
-
+    print('target length:',len(locals()['{}'.format(target_variable)]))
     
     
     for i in range(len(recommended_variable_list)):
@@ -193,6 +199,7 @@ for iterr in range(iterations):
         locals()['{}'.format(rec_var)].columns=tempcolumns
         locals()['{}'.format(rec_var)].dropna(inplace=True)
         locals()['{}'.format(rec_var)].reset_index(inplace=True,drop=True)
+        print(f'rec var {i+1}:',rec_var, ', length:',len(locals()['{}'.format(rec_var)]))
 
     merge1=locals()['{}'.format(target_variable)].copy()
     merge1_final=locals()['{}'.format(target_variable)].copy()
@@ -207,9 +214,11 @@ for iterr in range(iterations):
         merge1['timediff2']= merge1['timediff'].dt.days*86400 + merge1['timediff'].dt.seconds
         merge1['rank']=merge1.groupby([patient_id,charttime_column_name_target])['timediff2'].rank(method='first',na_option='bottom')
         merge1=merge1[merge1['rank']==1]
+        #print(merge1)
         merge1_temp=merge1[merge1['timediff2']<=86400][[patient_id,target_variable,charttime_column_name_target,rec_var]]
         merge1_final=pd.merge(merge1_final,merge1_temp,on=[patient_id,target_variable,charttime_column_name_target],how='left')
         merge1_final.reset_index(inplace=True,drop=True)
+        #print(merge1_final)
         merge1=merge1_final.copy()
 
     merge1.drop([charttime_column_name_target],axis=1,inplace=True)
