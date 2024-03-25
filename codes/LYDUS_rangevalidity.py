@@ -35,34 +35,46 @@ print(torch.__version__)
 
 config_yml_name = sys.argv[1]
 
+
 with open(f'{config_yml_name}',encoding='utf-8') as f:
     config_dict = yaml.load(f, Loader=yaml.FullLoader)
 
 session_id = config_dict['General_session_id']
-boxplotnum = config_dict['범위유효성_boxplotnum']
+boxplotnum = config_dict['Rangevalidity_boxplotnum']
 
 lab_table_name = config_dict['General_table_name']
-lab_table_label_column_name = '변수명'
-lab_table_item_column_name = '변수 ID'
-value_column_name = '값'
-patient_id = '환자 번호'
-charttime_column_name = '기록 날짜'
+
+lab_table_item_column_name = 'Variable_ID'
+lab_table_label_column_name = 'Variable_name'
+patient_id = 'Patient_number'
+value_column_name = 'Value'
+charttime_column_name = 'Record_datetime'
+
 
 df=pd.read_csv(lab_table_name,low_memory=False)
+newcolumns=['Primary_key','Variable_ID','Variable_category','Variable_name','Record_datetime','Value','Unit','Variable_type','Recorder','Recorder_position','Recorder_affiliation','Patient_number','Admission_number','Annotation_value','Mapping_info_1','Mapping_info_2']
+df.columns=newcolumns
 
-df['temp_값_float'] = pd.to_numeric(df['값'], errors='coerce')
+df['temp_value_float'] = pd.to_numeric(df['Value'], errors='coerce')
 
 # Step 2: Filter out rows where the temporary column is NaN
-df_filtered_all_columns = df.dropna(subset=['temp_값_float'])
+df_filtered_all_columns = df.dropna(subset=['temp_value_float'])
 
 # Step 3: Replace the original '값' column with the float-converted values and drop the temporary column
-df_filtered_all_columns['값'] = df_filtered_all_columns['temp_값_float']
-df = df_filtered_all_columns.drop(columns=['temp_값_float'])
+df_filtered_all_columns['Value'] = df_filtered_all_columns['temp_value_float']
+df = df_filtered_all_columns.drop(columns=['temp_value_float'])
 
 df.reset_index(inplace=True,drop=True)
 
-labellist=list(df.groupby(lab_table_label_column_name).count().sort_values(value_column_name,ascending=False).index[:100])
-itemlist=list(df.groupby(lab_table_item_column_name).count().sort_values(value_column_name,ascending=False).index[:100])
+filtered_groups = df.groupby(lab_table_label_column_name).filter(lambda x: len(x) > 1000)
+
+labellist = list(filtered_groups.groupby(lab_table_label_column_name).count().sort_values(value_column_name, ascending=False).index)
+
+#filtered_groups = df.groupby(lab_table_item_column_name).filter(lambda x: len(x) > 500)
+
+#itemlist = list(filtered_groups.groupby(lab_table_item_column_name).count().sort_values(value_column_name, ascending=False).index)
+
+itemlist=list(df.groupby(lab_table_item_column_name).count().sort_values(value_column_name,ascending=False).index[:len(labellist)])
 
 def get_outlier(df=None, column=None, weight=1.5):
     quantile_25 = np.percentile(df[column].values, 25)
@@ -165,7 +177,7 @@ for i, ax in enumerate(axs.flat):
     itemidname=itemlist[i]
     labelname=labellist[i]
     locals()['{}'.format(itemidname)]
-    ax.boxplot(locals()['{}'.format(itemidname)]['값'],flierprops=flierprops)
+    ax.boxplot(locals()['{}'.format(itemidname)]['Value'],flierprops=flierprops)
     ax.set_title(labelname,fontsize=20,fontweight='bold')
     ax.tick_params(axis='y',labelsize=14)
 plt.tight_layout()
