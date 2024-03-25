@@ -35,30 +35,25 @@ warnings.filterwarnings('ignore')
 print(torch.__version__)
 
 now_temp1= datetime.datetime.now()
-
 config_yml_name = sys.argv[1]
 with open(f'{config_yml_name}',encoding='utf-8') as f:
     config_dict = yaml.load(f, Loader=yaml.FullLoader)
 
-operation_type = config_dict['신뢰도_operation_type']
-automatic_num = config_dict['신뢰도_automatic_num']
-openai.api_key = config_dict['신뢰도_openai_key']
-target_variable = config_dict['신뢰도_target_variable']
-gpt_model_type = config_dict['신뢰도_gpt_model_type']
-recommended_variable_num = config_dict['신뢰도_recommended_variable_num']
-splitnum = config_dict['신뢰도_splitnum']
-hidden_length1 = config_dict['신뢰도_hidden_length1']
-hidden_length2 = config_dict['신뢰도_hidden_length2']
+operation_type = config_dict['Reliability_operation_type']
+automatic_num = config_dict['Reliability_automatic_num']
+openai.api_key = config_dict['Reliability_openai_key']
+target_variable = config_dict['Reliability_target_variable']
+gpt_model_type = config_dict['Reliability_gpt_model_type']
+recommended_variable_num = config_dict['Reliability_recommended_variable_num']
 
-lab_table_name = config_dict['General_table_name']
+table_name = config_dict['General_table_name']
 session_id = config_dict['General_session_id']
 
-
-lab_table_item_column_name = '변수 ID'
-lab_table_label_column_name = '변수명'
-patient_id = '입원 번호'
-value_column_name = '값'
-charttime_column_name = '기록 날짜'
+table_item_column_name = 'Variable_ID'
+table_label_column_name = 'Variable_name'
+patient_id = 'Patient_number'
+value_column_name = 'Value'
+charttime_column_name = 'Record_datetime'
 
 def query_gpt(target_variable, gpt_model_type, recommended_variable_num, labeltext):    
     usercontent='''다음 중 
@@ -85,29 +80,52 @@ def query_gpt(target_variable, gpt_model_type, recommended_variable_num, labelte
     aa=completion.choices[0].message.content
     return aa
 
-df=pd.read_csv(lab_table_name,low_memory=False)
-df=df[df['변수 category']=='LABEVENTS']
+df=pd.read_csv(table_name,low_memory=False)
+newcolumns=['Primary_key','Variable_ID','Variable_category','Variable_name','Record_datetime','Value','Unit','Variable_type','Recorder','Recorder_position','Recorder_affiliation','Patient_number','Admission_number','Annotation_value','Mapping_info_1','Mapping_info_2']
+df.columns=newcolumns
+df=df[df['Mapping_info_1']=='Events']
 df.reset_index(inplace=True,drop=True)
 
-df['temp_값_float'] = pd.to_numeric(df['값'], errors='coerce')
+
+df['temp_value_float'] = pd.to_numeric(df[value_column_name], errors='coerce')
 
 # Step 2: Filter out rows where the temporary column is NaN
-df_filtered_all_columns = df.dropna(subset=['temp_값_float'])
+df_filtered_all_columns = df.dropna(subset=['temp_value_float'])
 
 # Step 3: Replace the original '값' column with the float-converted values and drop the temporary column
-df_filtered_all_columns['값'] = df_filtered_all_columns['temp_값_float']
-df = df_filtered_all_columns.drop(columns=['temp_값_float'])
+df_filtered_all_columns[value_column_name] = df_filtered_all_columns['temp_value_float']
+df = df_filtered_all_columns.drop(columns=['temp_value_float'])
 
 df.reset_index(inplace=True,drop=True)
 
-labellist=list(df.groupby(lab_table_label_column_name).count().sort_values(value_column_name,ascending=False).index[:200])
+labellist=list(df.groupby(table_label_column_name).count().sort_values(value_column_name,ascending=False).index[:200])
 
 labeltext=''
 for i in range(len(labellist)):
     labeltext+="'"
     labeltext+=labellist[i]
     labeltext+="', "
+
+
+dfdf1=pd.read_csv(table_name,low_memory=False)
+newcolumns=['Primary_key','Variable_ID','Variable_category','Variable_name','Record_datetime','Value','Unit','Variable_type','Recorder','Recorder_position','Recorder_affiliation','Patient_number','Admission_number','Golden_label','Mapping_info_1','Mapping_info_2']
+dfdf1.columns=newcolumns
+df_dx1=dfdf1[dfdf1['Mapping_info_1']=='ICD9_Dx']
+df_dx2=dfdf1[dfdf1['Mapping_info_1']=='ICD10_Dx']
+df_dx3=pd.concat([df_dx1,df_dx2])
+
+labellist_dx=list(df_dx3.groupby(table_label_column_name).count().sort_values(value_column_name,ascending=False).index[:100])
+
+if len(labellist_dx)>0:
+    labellist_dx=[x.replace(',','') for x in labellist_dx]
+
+    for i in range(len(labellist_dx)):
+        labeltext+="'"
+        labeltext+=labellist_dx[i]
+        labeltext+="', "
+
 labeltext=labeltext[:-2]
+
 
 if operation_type=='automatic':
     iterations=automatic_num
@@ -166,16 +184,44 @@ for iterr in range(iterations):
 
     print('recommended variables:' ,recommended_variable_list)
 
-    locals()['{}'.format(target_variable)] = df[df[lab_table_label_column_name]==target_variable]
+    locals()['{}'.format(target_variable)] = df[df[table_label_column_name]==target_variable]
     locals()['{}'.format(target_variable)].reset_index(inplace=True,drop=True)
-    locals()['{}'.format(target_variable)][charttime_column_name] = pd.to_datetime(locals()['{}'.format(target_variable)][charttime_column_name])
+    #print(locals()['{}'.format(target_variable)])
+    distinct_target_variable_category=list(set(locals()['{}'.format(target_variable)]['Variable_category']))
+    for varcat in distinct_target_variable_category:
+        locals()['{}'.format(target_variable+varcat)]= locals()['{}'.format(target_variable)][locals()['{}'.format(target_variable)]['Variable_category']==varcat]
+        locals()['{}'.format(target_variable+varcat)][charttime_column_name]=pd.to_datetime(locals()['{}'.format(target_variable+varcat)][charttime_column_name])
+        locals()['{}'.format(target_variable+varcat)][charttime_column_name]=locals()['{}'.format(target_variable+varcat)][charttime_column_name].dt.tz_localize(None)
+    if len(distinct_target_variable_category)==1:
+        locals()['{}'.format(target_variable)]=locals()['{}'.format(target_variable+varcat)]
+    else:
+        for varcat in distinct_target_variable_category:
+            locals()['{}'.format(target_variable)]=locals()['{}'.format(target_variable+varcat)]
+            break
+        for vv in range(1,len(distinct_target_variable_category)):
+            locals()['{}'.format(target_variable)]=pd.concat([locals()['{}'.format(target_variable)],locals()['{}'.format(target_variable+varcat)]])
     print('target length:',len(locals()['{}'.format(target_variable)]))
+    locals()['{}'.format(target_variable)].reset_index(inplace=True,drop=True)
+    #print(locals()['{}'.format(target_variable)])
 
     for i in range(len(recommended_variable_list)):
         rec_var=recommended_variable_list[i]
-        locals()['{}'.format(rec_var)] = df[df[lab_table_label_column_name]==rec_var]
+        locals()['{}'.format(rec_var)] = df[df[table_label_column_name]==rec_var]
         locals()['{}'.format(rec_var)].reset_index(inplace=True,drop=True)
-        locals()['{}'.format(rec_var)][charttime_column_name] = pd.to_datetime(locals()['{}'.format(rec_var)][charttime_column_name])
+        
+        distinct_rec_var_category=list(set(locals()['{}'.format(rec_var)]['Variable_category']))
+        for varcat in distinct_rec_var_category:
+            locals()['{}'.format(rec_var+varcat)]= locals()['{}'.format(rec_var)][locals()['{}'.format(rec_var)]['Variable_category']==varcat]
+            locals()['{}'.format(rec_var+varcat)][charttime_column_name]=pd.to_datetime(locals()['{}'.format(rec_var+varcat)][charttime_column_name])
+            locals()['{}'.format(rec_var+varcat)][charttime_column_name]=locals()['{}'.format(rec_var+varcat)][charttime_column_name].dt.tz_localize(None)
+        if len(distinct_rec_var_category)==1:
+            locals()['{}'.format(rec_var)]=locals()['{}'.format(rec_var+varcat)]
+        else:
+            for varcat in distinct_rec_var_category:
+                locals()['{}'.format(rec_var)]=locals()['{}'.format(rec_var+varcat)]
+                break
+            for vv in range(1,len(distinct_rec_var_category)):
+                locals()['{}'.format(rec_var)]=pd.concat([locals()['{}'.format(rec_var)],locals()['{}'.format(rec_var+varcat)]])
         print(f'rec var {i+1}:',rec_var, ', length:',len(locals()['{}'.format(rec_var)]))
 
     columns_to_extract=[patient_id, value_column_name,charttime_column_name]
@@ -208,18 +254,28 @@ for iterr in range(iterations):
     #for i in range(1):
         rec_var=recommended_variable_list[i]
         charttime_column_name_target=charttime_column_name+'_target'
-
-        merge1=pd.merge(merge1,locals()['{}'.format(rec_var)],on=[patient_id],how='left')
-        merge1['timediff']=abs(merge1[charttime_column_name_target]-merge1[charttime_column_name])
-        merge1['timediff2']= merge1['timediff'].dt.days*86400 + merge1['timediff'].dt.seconds
-        merge1['rank']=merge1.groupby([patient_id,charttime_column_name_target])['timediff2'].rank(method='first',na_option='bottom')
-        merge1=merge1[merge1['rank']==1]
-        #print(merge1)
-        merge1_temp=merge1[merge1['timediff2']<=86400][[patient_id,target_variable,charttime_column_name_target,rec_var]]
-        merge1_final=pd.merge(merge1_final,merge1_temp,on=[patient_id,target_variable,charttime_column_name_target],how='left')
-        merge1_final.reset_index(inplace=True,drop=True)
-        #print(merge1_final)
-        merge1=merge1_final.copy()
+        
+        if rec_var not in labellist_dx:
+            merge1=pd.merge(merge1,locals()['{}'.format(rec_var)],on=[patient_id],how='left')
+            merge1['timediff']=abs(merge1[charttime_column_name_target]-merge1[charttime_column_name])
+            merge1['timediff2']= merge1['timediff'].dt.days*86400 + merge1['timediff'].dt.seconds
+            merge1['rank']=merge1.groupby([patient_id,charttime_column_name_target])['timediff2'].rank(method='first',na_option='bottom')
+            merge1=merge1[merge1['rank']==1]
+            #print(merge1)
+            merge1_temp=merge1[merge1['timediff2']<=86400][[patient_id,target_variable,charttime_column_name_target,rec_var]]
+            merge1_final=pd.merge(merge1_final,merge1_temp,on=[patient_id,target_variable,charttime_column_name_target],how='left')
+            merge1_final.reset_index(inplace=True,drop=True)
+            #print(merge1_final)
+            merge1=merge1_final.copy()
+        else:
+            dxlabel=[]
+            for mm in range(len(merge1)):
+                pidtemp=merge1['Patient_number'][mm]
+                if pidtemp in list(locals()['{}'.format(rec_var)]['Patient_number']):
+                    dxlabel.append(1)
+                else:
+                    dxlabel.append(0)
+            merge1[rec_var]=dxlabel
 
     merge1.drop([charttime_column_name_target],axis=1,inplace=True)
     merge1.drop([patient_id],axis=1,inplace=True)
@@ -265,7 +321,7 @@ for iterr in range(iterations):
 
     target_variable=target_variable.replace(' ','')
 
-    kf = KFold(n_splits=splitnum,shuffle=True) # Define the split - into 2 folds 
+    kf = KFold(n_splits=2,shuffle=True) # Define the split - into 2 folds 
 
     totaldf=pd.DataFrame()
 
@@ -381,16 +437,16 @@ for iterr in range(iterations):
             def __init__(self, **kwargs):
                 super().__init__()
                 self.encoder_hidden_layer = nn.Linear(
-                    in_features=len(X_columns), out_features=hidden_length1
+                    in_features=len(X_columns), out_features=int((recommended_variable_num+1)//1.5)
                 )
                 self.encoder_output_layer = nn.Linear(
-                    in_features=hidden_length1, out_features=hidden_length2
+                    in_features=int((recommended_variable_num+1)//1.5), out_features=int((recommended_variable_num+1)//2)
                 )
                 self.decoder_hidden_layer = nn.Linear(
-                    in_features=hidden_length2, out_features=hidden_length1
+                    in_features=int((recommended_variable_num+1)//2), out_features=int((recommended_variable_num+1)//1.5)
                 )
                 self.decoder_output_layer = nn.Linear(
-                    in_features=hidden_length1, out_features=len(X_columns)
+                    in_features=int((recommended_variable_num+1)//1.5), out_features=len(X_columns)
                 )
 
             def forward(self, features):
