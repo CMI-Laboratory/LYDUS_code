@@ -39,21 +39,25 @@ import random
 warnings.filterwarnings('ignore')
 print(torch.__version__)
 
+
 now1= datetime.datetime.now()
 
 config_yml_name = sys.argv[1]
 
 with open(f'{config_yml_name}',encoding='utf-8') as f:
     config_dict = yaml.load(f, Loader=yaml.FullLoader)
+    
+lab_table_name = config_dict['General_table_name']
+session_id = config_dict['General_session_id']
 
 lab_table_name = config_dict['General_table_name']
 session_id = config_dict['General_session_id']
 
-lab_table_item_column_name = '변수 ID'
-lab_table_label_column_name = '변수명'
-patient_id = '환자 번호'
-value_column_name = '값'
-charttime_column_name = '기록 날짜'
+lab_table_item_column_name = 'Variable_ID'
+lab_table_label_column_name = 'Variable_name'
+patient_id = 'Patient_number'
+value_column_name = 'Value'
+charttime_column_name = 'Record_datetime'
 
 def gini_simpson(data):
     total_count = len(data)
@@ -96,23 +100,30 @@ savepath1='LYDUS_results/'+str(session_id)+'/'+'granularity/'
 savepath2='LYDUS_results/'+str(session_id)+'/'+'granularity/histograms/'
 
 df=pd.read_csv(lab_table_name,low_memory=False)
+newcolumns=['Primary_key','Variable_ID','Variable_category','Variable_name','Record_datetime','Value','Unit','Variable_type','Recorder','Recorder_position','Recorder_affiliation','Patient_number','Admission_number','Annotation_value','Mapping_info_1','Mapping_info_2']
+df.columns=newcolumns
 
-df['temp_값_float'] = pd.to_numeric(df['값'], errors='coerce')
+df['temp_value_float'] = pd.to_numeric(df['Value'], errors='coerce')
 
 # Step 2: Filter out rows where the temporary column is NaN
-df_filtered_all_columns = df.dropna(subset=['temp_값_float'])
+df_filtered_all_columns = df.dropna(subset=['temp_value_float'])
 
 # Step 3: Replace the original '값' column with the float-converted values and drop the temporary column
-df_filtered_all_columns['값'] = df_filtered_all_columns['temp_값_float']
-df = df_filtered_all_columns.drop(columns=['temp_값_float'])
+df_filtered_all_columns['Value'] = df_filtered_all_columns['temp_value_float']
+df = df_filtered_all_columns.drop(columns=['temp_value_float'])
 
 df.reset_index(inplace=True,drop=True)
 
+filtered_groups = df.groupby(lab_table_label_column_name).filter(lambda x: len(x) > 1000)
 
-#df=df.sample(frac=0.01,replace=False)
+labellist = list(filtered_groups.groupby(lab_table_label_column_name).count().sort_values(value_column_name, ascending=False).index)
 
-labellist=list(df.groupby(lab_table_label_column_name).count().sort_values(value_column_name,ascending=False).index[:100])
-itemlist=list(df.groupby(lab_table_item_column_name).count().sort_values(value_column_name,ascending=False).index[:100])
+#filtered_groups = df.groupby(lab_table_item_column_name).filter(lambda x: len(x) > 500)
+
+#itemlist = list(filtered_groups.groupby(lab_table_item_column_name).count().sort_values(value_column_name, ascending=False).index)
+
+itemlist=list(df.groupby(lab_table_item_column_name).count().sort_values(value_column_name,ascending=False).index[:len(labellist)])
+
 
 totaltable=pd.DataFrame({lab_table_item_column_name:itemlist,lab_table_label_column_name:labellist})
 totaltable['count']=np.nan
@@ -120,7 +131,7 @@ totaltable['decimalnum']=np.nan
 totaltable['Granularity']=np.nan
 
 for i in range(len(itemlist)):
-    dftemp=df[df['변수명']==labellist[i]]
+    dftemp=df[df['Variable_name']==labellist[i]]
     dftemp.reset_index(inplace=True,drop=True)
     columns_to_extract=[patient_id, value_column_name,charttime_column_name]
     dftemp=dftemp[columns_to_extract]
