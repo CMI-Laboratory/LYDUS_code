@@ -10,6 +10,12 @@ def read_yaml(file_path):
     with open(file_path, 'r') as file:
         return yaml.safe_load(file)
 
+# Function to read variables and their descriptions from the specified CSV file
+def read_variables_csv(file_path):
+    data = pd.read_csv(file_path)
+    # Select only the 'Variable_name' and 'Description' columns for the dictionary
+    return pd.Series(data['Description'].values, index=data['Variable_name']).to_dict()
+
 # Check if the script is provided with the correct number of command-line arguments
 if len(sys.argv) < 2:
     print("Usage: python script_name.py <config_path>")
@@ -28,9 +34,16 @@ if not openai_api_key:
 openai.api_key = openai_api_key  # Set the OpenAI API key
 
 csv_path = config_data.get('csv_path')
-variable_list = config_data.get('Variables', [])
-yaml_variable_dictionary = {item['Variable_name']: item['Description'] for item in variable_list}
 
+# Read variables and their descriptions from the CSV file specified by VIA_path
+via_path = config_data.get('VIA_path')
+if not via_path:
+    print("VIA_path not found in the configuration file.")
+    sys.exit(1)
+
+yaml_variable_dictionary = read_variables_csv(via_path)
+
+# Continue with the rest of the original script for data processing...
 # Define the function to check if a string is a date
 def is_date_string(s):
     date_patterns = [
@@ -40,6 +53,7 @@ def is_date_string(s):
         r'\d{4}-\d{2}-\d{2} \d{2}:\d{2}:\d{2}',  # YYYY-MM-DD HH:MM:SS
     ]
     return any(re.match(pattern, s) for pattern in date_patterns)
+
 
 # Process CSV file and extract unique time-related variables
 def get_combined_time_df_with_unique_variable_names(file_path):
