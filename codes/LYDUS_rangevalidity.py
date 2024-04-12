@@ -139,8 +139,7 @@ for i in range(len(labellist)):
 
         print(labelname,itemidname,"outlier_under:",proportion_under,"outlier_upper:",proportion_upper,"outlier_total:",proportion_total)
     except:
-        print('########## something wrong ############')
-        print(labelname,itemidname)
+
         errorlist.append(labelname)
 
 try:
@@ -181,7 +180,7 @@ for i, ax in enumerate(axs.flat):
     ax.set_title(labelname,fontsize=20,fontweight='bold')
     ax.tick_params(axis='y',labelsize=14)
 plt.tight_layout()
-plt.savefig('LYDUS_results/'+str(session_id)+'/rangevalidity/botplots.png')
+plt.savefig('LYDUS_results/'+str(session_id)+'/rangevalidity/boxplots.png')
 
 
 now2=datetime.datetime.now()
