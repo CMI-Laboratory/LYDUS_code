@@ -131,49 +131,52 @@ totaltable['decimalnum']=np.nan
 totaltable['Granularity']=np.nan
 
 for i in range(len(itemlist)):
-    dftemp=df[df['Variable_name']==labellist[i]]
-    dftemp.reset_index(inplace=True,drop=True)
-    columns_to_extract=[patient_id, value_column_name,charttime_column_name]
-    dftemp=dftemp[columns_to_extract]
-    dftemp.dropna(inplace=True)
-    dftemp.reset_index(inplace=True,drop=True)
+    try:
+        dftemp=df[df['Variable_name']==labellist[i]]
+        dftemp.reset_index(inplace=True,drop=True)
+        columns_to_extract=[patient_id, value_column_name,charttime_column_name]
+        dftemp=dftemp[columns_to_extract]
+        dftemp.dropna(inplace=True)
+        dftemp.reset_index(inplace=True,drop=True)
 
-    dftemp[value_column_name]=dftemp[value_column_name].apply(round_at_3)
+        dftemp[value_column_name]=dftemp[value_column_name].apply(round_at_3)
 
-    cnt=len(dftemp)
+        cnt=len(dftemp)
 
-    decimalnum=-4
+        decimalnum=-4
 
-    for iterr in range(5):
+        for iterr in range(5):
+            dftemp2=dftemp.copy()
+            dftemp2[value_column_name]=dftemp2[value_column_name].apply(multiply_by,args=(3-iterr,))
+            tempnum=0
+            for j in range(len(dftemp2)):
+                if math.isclose(dftemp2[value_column_name][j]%10, 0, abs_tol=0.001)==True or math.isclose(-dftemp2[value_column_name][j]%10, 0, abs_tol=0.001)==True:
+                    tempnum+=1
+            if tempnum/len(dftemp2)>0.99:
+                pass
+            else:
+                decimalnum=3-iterr
+                break
+
         dftemp2=dftemp.copy()
         dftemp2[value_column_name]=dftemp2[value_column_name].apply(multiply_by,args=(3-iterr,))
-        tempnum=0
+        values=[]
         for j in range(len(dftemp2)):
-            if math.isclose(dftemp2[value_column_name][j]%10, 0, abs_tol=0.001)==True or math.isclose(-dftemp2[value_column_name][j]%10, 0, abs_tol=0.001)==True:
-                tempnum+=1
-        if tempnum/len(dftemp2)>0.99:
-            pass
-        else:
-            decimalnum=3-iterr
-            break
+            values.append(int(dftemp2[value_column_name][j]%10))
+        a,b=gini_simpson(values)
+        print(labellist[i],itemlist[i],round(a,4))
+        totaltable['count'][i]=len(dftemp2)
+        totaltable['decimalnum'][i]=decimalnum
+        totaltable['Granularity'][i]=a
 
-    dftemp2=dftemp.copy()
-    dftemp2[value_column_name]=dftemp2[value_column_name].apply(multiply_by,args=(3-iterr,))
-    values=[]
-    for j in range(len(dftemp2)):
-        values.append(int(dftemp2[value_column_name][j]%10))
-    a,b=gini_simpson(values)
-    print(labellist[i],itemlist[i],round(a,4))
-    totaltable['count'][i]=len(dftemp2)
-    totaltable['decimalnum'][i]=decimalnum
-    totaltable['Granularity'][i]=a
+        plt.hist(values)
+        plt.title(labellist[i])
+        label_temp=re.sub(r"[^\uAC00-\uD7A30-9a-zA-Z\s]", "", labellist[i])
 
-    plt.hist(values)
-    plt.title(labellist[i])
-    label_temp=re.sub(r"[^\uAC00-\uD7A30-9a-zA-Z\s]", "", labellist[i])
-
-    plt.savefig(savepath2+str(itemlist[i])+ ' ' +label_temp+'.png')
-    plt.close()
+        plt.savefig(savepath2+str(itemlist[i])+ ' ' +label_temp+'.png')
+        plt.close()
+    except:
+        pass
 
 totalcount=np.sum(totaltable['count'])
 totalgranularity=np.sum(totaltable['count']*totaltable['Granularity'])/totalcount
