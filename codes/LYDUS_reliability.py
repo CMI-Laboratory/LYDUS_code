@@ -84,6 +84,7 @@ df=pd.read_csv(table_name,low_memory=False)
 newcolumns=['Primary_key','Variable_ID','Variable_category','Variable_name','Record_datetime','Value','Unit','Variable_type','Recorder','Recorder_position','Recorder_affiliation','Patient_number','Admission_number','Annotation_value','Mapping_info_1','Mapping_info_2']
 df.columns=newcolumns
 df=df[df['Mapping_info_1']=='Events']
+df = df[df['Mapping_info_2'].isin(['lab_events'])]
 df.reset_index(inplace=True,drop=True)
 
 
@@ -200,7 +201,7 @@ for iterr in range(iterations):
             break
         for vv in range(1,len(distinct_target_variable_category)):
             locals()['{}'.format(target_variable)]=pd.concat([locals()['{}'.format(target_variable)],locals()['{}'.format(target_variable+varcat)]])
-    print('target length:',len(locals()['{}'.format(target_variable)]))
+    #print('target length:',len(locals()['{}'.format(target_variable)]))
     locals()['{}'.format(target_variable)].reset_index(inplace=True,drop=True)
     #print(locals()['{}'.format(target_variable)])
 
@@ -222,7 +223,7 @@ for iterr in range(iterations):
                 break
             for vv in range(1,len(distinct_rec_var_category)):
                 locals()['{}'.format(rec_var)]=pd.concat([locals()['{}'.format(rec_var)],locals()['{}'.format(rec_var+varcat)]])
-        print(f'rec var {i+1}:',rec_var, ', length:',len(locals()['{}'.format(rec_var)]))
+        #print(f'rec var {i+1}:',rec_var, ', length:',len(locals()['{}'.format(rec_var)]))
 
     columns_to_extract=[patient_id, value_column_name,charttime_column_name]
     tempcolumns=columns_to_extract.copy()
@@ -562,7 +563,7 @@ for iterr in range(iterations):
     totaldf_under=totaldf_under[totaldf_under[target_variable] < totaldf_under['LR_0.01']]
     totaldf_under=totaldf_under[totaldf_under[target_variable] < totaldf_under['AE']*0.5]
     print('==========================')
-    print('total count',len(totaldf))
+    #print('total count',len(totaldf))
     print('upper count',len(totaldf_upper))
     print('under count',len(totaldf_under))
     filepathsave2='LYDUS_results/'+str(session_id)+'/'+'reliability/'
