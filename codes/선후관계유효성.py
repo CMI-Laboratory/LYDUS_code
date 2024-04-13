@@ -99,7 +99,8 @@ Procedure:
 - Chronological Understanding: Establish the chronological order of events based on the time-related variables within the medical data.
 - Exclude Non-Time Variables: Any variable that does not represent a time point should be excluded (e.g., location, status codes, categorical data).
 - Exclude Unpaired Time Variables: If a variable representing a start time does not have a corresponding end time (or vice versa), it should be excluded from the pairing process.
-- Exclude Sensitive or Complex Time Variables: Variables that are sensitive in nature (like 'death_time' or 'year_of_birth') or that have complex relationships (like 'diagnosis_date' preceding 'admission_date' or 'insertion_date' preceding 'tubing_change') that require additional context should be excluded from direct pairing.
+- Exclude Sensitive or Complex Time Variables: Variables that are sensitive in nature (like 'death_time' or 'year_of_birth') or that have complex relationships (like 'diagnosis_date' preceding 'admission_date') that require additional context should be excluded from direct pairing.
+- Exclude additional context variables such as ('insertion date' preceding 'tubing change') that require additional context.
 - Create Time Variable Pairs: Only after exclusions have been identified, formulate pairs of time-related variables that logically represent the beginning and end of an event or process.
 - Validate and Finalize Sequence: Confirm that the pairs are in a universally applicable sequence, according to the dataset's context.
 - Preserve Original Formatting: Maintain the exact case and naming of the variable names from the dataset.
