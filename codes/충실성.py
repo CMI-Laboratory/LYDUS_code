@@ -6,7 +6,7 @@ import sys
 def process_data(csv_path):
     df = pd.read_csv(csv_path, low_memory=False)
     pd.set_option('display.max_columns', None)
-    df['Mapping_info_2'].fillna('Not Provided', inplace=True)
+    df['Mapping_info_2'] = df['Mapping_info_2'].fillna('Not Provided')
 
     non_medical_code_df = df[df['Mapping_info_1'] != 'medical_code']
     medical_code_df = df[df['Mapping_info_1'] == 'medical_code']
