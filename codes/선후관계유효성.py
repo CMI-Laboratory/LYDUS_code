@@ -202,7 +202,7 @@ results = validate_records_long_format(dataset, timepoint_pairs)
 validity_percentage, errors_count, valid_records_count, errors_details, total_checked_records = results
 
 # Round the validity_percentage to 3 decimal places before printing
-rounded_validity_percentage = round(validity_percentage, 3)
+rounded_validity_percentage = round(validity_percentage, 2)
 
 # Print the results with the rounded validity percentage
 print(f"선후관계 유효성: {rounded_validity_percentage}%")
