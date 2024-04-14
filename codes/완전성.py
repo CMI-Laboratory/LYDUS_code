@@ -24,10 +24,15 @@ def main(csv_path):
 
     print(completeness_df)
 
+    # Save the completeness details to a CSV file
+    completeness_df.to_csv('결과_완전성.csv', index=False)
+    print("Detailed results are saved as '결과_완전성.csv'.")
+
+
 if __name__ == "__main__":
     if len(sys.argv) < 2:
-        print("CSV 파일 경로를 명령줄 인자로 제공 해주세요.")
+        print("Please provide the CSV file path as a command line argument.")
         sys.exit(1)  # Exit the script with an error code
 
-    csv_path = sys.argv[1]  # 명령줄에서 제공된 CSV 파일 경로
+    csv_path = sys.argv[1]  # Get the CSV file path provided as a command line argument
     main(csv_path)
