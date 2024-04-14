@@ -1,92 +1,172 @@
-import re
-import pandas as pd
 import sys
+import yaml
+import pandas as pd
+import re
+from collections import defaultdict, Counter
+from io import StringIO
+import openai
 
-# Definitions of ICD regex patterns
-ICD9_DIAGNOSIS_REGEX = re.compile(r"^(?:\d{3}(?:\.\d{1,2})?|E\d{3}(?:\.\d)?|V\d{2}(?:\.\d{1,2})?)$")
-ICD10_DIAGNOSIS_REGEX = re.compile(
-    r"^[A-Za-z]\d{2}$"
-    r"|^[A-Za-z]\d{2}\.\d{0,3}$"
-    r"|^[A-Za-z]\d{2}\.[1-9]\d{0,1}[xX]\d$"
-    r"|^[A-Za-z]\d{2}[xX]\d$",
-    re.IGNORECASE
-)
-ICD9_PROCEDURE_REGEX = re.compile(r"^\d{2,3}(\.\d{1,2})?$")
-ICD10_PROCEDURE_REGEX = re.compile(r"^[0-9A-Z]{7}$", re.IGNORECASE)
+# Define all necessary functions first
+def read_yaml(path):
+    with open(path, 'r') as file:
+        return yaml.safe_load(file)
 
-# Function to validate ICD codes
-def is_valid_icd_code(code, category):
-    code = str(code).replace(' ', '')
-    if 'ICD9_Dx' in category:
-        return bool(ICD9_DIAGNOSIS_REGEX.match(code))
-    elif 'ICD10_Dx' in category:
-        return bool(ICD10_DIAGNOSIS_REGEX.match(code))
-    elif 'ICD9_Px' in category:
-        return bool(ICD9_PROCEDURE_REGEX.match(code))
-    elif 'ICD10_Px' in category:
-        return bool(ICD10_PROCEDURE_REGEX.match(code))
-    return False
+def parse_gpt_response_to_df(response_text):
+    response_text = response_text.strip()
+    if not response_text.startswith("Variable\tCode\tValid"):
+        response_text = "Variable\tCode\tValid\n" + response_text
+    return pd.read_csv(StringIO(response_text), sep="\t")
 
-# Function to validate ICD codes from a CSV file and generate a summary
-def validate_icd_from_csv(file_path):
-    df = pd.read_csv(file_path)
-    df.columns = [col.strip() for col in df.columns]
-    df['Mapping_info_1'] = df['Mapping_info_1'].astype(str)
-    df['Validation'] = df.apply(
-        lambda row: 'valid' if is_valid_icd_code(row['Value'], row['Mapping_info_1']) else 'invalid', axis=1
-    )
+def generate_regex_gpt4(variable_name, description):
+    system_prompt = f"""
+    Provide a regular expression pattern for '{variable_name}' described as '{description}'. The pattern should match the most standard codes of the system without being too strict or too loose, and enclosed in quotes.
+    """
+    try:
+        response = openai.ChatCompletion.create(
+            model="gpt-4",
+            messages=[{"role": "system", "content": system_prompt}, {"role": "user", "content": "Please generate the regex pattern."}],
+            temperature=0,
+            max_tokens=100,
+            top_p=1.0,
+            n=1,
+            frequency_penalty=0,
+            presence_penalty=0
+        )
+        return response.choices[0]['message']['content'].strip().strip('"')
+    except Exception as e:
+        print(f"Error generating regex for {variable_name}: {e}")
+        return None
 
-    summary = {
-        'ICD-9 Diagnosis': {'Total': 0, 'Correct': 0, 'Error': 0, 'Details': []},
-        'ICD-10 Diagnosis': {'Total': 0, 'Correct': 0, 'Error': 0, 'Details': []},
-        'ICD-9 Procedure': {'Total': 0, 'Correct': 0, 'Error': 0, 'Details': []},
-        'ICD-10 Procedure': {'Total': 0, 'Correct': 0, 'Error': 0, 'Details': []}
-    }
+def validate_medical_codes_gpt4(unique_matched_columns_df, validation_df):
+    system_prompt_parts = [
+        "You are a medical code expert. Determine if these codes are valid by rewriting True for correct code, and False for wrong code."
+    ]
+    for _, row in unique_matched_columns_df.iterrows():
+        system_prompt_parts.append(f"{row['Variable_name']}\tContains {row['Description']}")
 
-    for _, row in df.iterrows():
-        category = 'ICD-9 Diagnosis' if 'ICD9_Dx' in row['Mapping_info_1'] else \
-                   'ICD-10 Diagnosis' if 'ICD10_Dx' in row['Mapping_info_1'] else \
-                   'ICD-9 Procedure' if 'ICD9_Px' in row['Mapping_info_1'] else \
-                   'ICD-10 Procedure' if 'ICD10_Px' in row['Mapping_info_1'] else None
-        if category:
-            summary[category]['Total'] += 1
-            if row['Validation'] == 'valid':
-                summary[category]['Correct'] += 1
-            else:
-                summary[category]['Error'] += 1
-                summary[category]['Details'].append((row['Value'], row['Variable_name'], row.get('Patient_number', 'N/A')))
+    system_prompt = "\n".join(system_prompt_parts)
+    user_prompt_parts = ["Variable\tCode\tValid"]
+    for index, row in validation_df.iterrows():
+        user_prompt_parts.append(f"{index}\t{row['Variable']}\t{row['Code']}\t{row['Valid']}")
 
-    total_valid = sum(cat['Correct'] for cat in summary.values())
-    total_count = sum(cat['Total'] for cat in summary.values())
-    valid_percentage = (total_valid / total_count) * 100 if total_count else 0
+    user_prompt = "\n".join(user_prompt_parts)
+    try:
+        response = openai.ChatCompletion.create(
+            model="gpt-4",
+            messages=[{"role": "system", "content": system_prompt}, {"role": "user", "content": user_prompt}],
+            temperature=0,
+            max_tokens=533,
+            top_p=1.0,
+            frequency_penalty=0,
+            presence_penalty=0
+        )
+        return response.choices[0]['message']['content'].strip()
+    except Exception as e:
+        print(f"Error in validating medical codes: {e}")
+        return None
 
-    return {**summary, "valid_percentage": valid_percentage}
+def calculate_validity_percentage(response_df):
+    valid_count = response_df['Valid'].value_counts().get(True, 0) + response_df['Valid'].value_counts().get('True', 0)
+    total_count = len(response_df)
+    return (valid_count / total_count) * 100 if total_count > 0 else 0, valid_count, total_count
 
-# Function to format and print the validation summary
-def format_error_details(results, include_details=True):
-    error_messages = [f"ICD Code Validity: {results['valid_percentage']:.2f}%\n"]
-    if include_details:
-        for category, info in results.items():
-            if category == 'valid_percentage':
-                continue
-            error_messages.append(f"{category} - Total: {info['Total']}, Correct: {info['Correct']}, Error: {info['Error']}")
-            if info['Error'] > 0:
-                error_messages.append(f"{category} Error Details:")
-                for detail in info['Details']:
-                    error_messages.append(f"- Code: {detail[0]}, Variable Name: {detail[1]}, Patient Number: {detail[2]}")
-                error_messages.append("")
-    return "\n".join(error_messages)
+# Main script execution
+if len(sys.argv) < 2:
+    print("Usage: python script_name.py <config_path>")
+    sys.exit(1)
 
-def run(file_path):
-    validation_results = validate_icd_from_csv(file_path)
-    error_details = format_error_details(validation_results, include_details=True)
-    print(error_details)
+config_path = sys.argv[1]
+config_data = read_yaml(config_path)
 
-# Entry point for script execution
-if __name__ == "__main__":
-    if len(sys.argv) < 2:
-        print("Usage: python 코드유효성.py <path_to_csv_file>")
+openai_api_key = config_data.get('open_api_key')
+if not openai_api_key:
+    print("OpenAI API key not found in the configuration file.")
+    sys.exit(1)
+openai.api_key = openai_api_key
+
+csv_path = config_data.get('csv_path')
+if not csv_path:
+    print("CSV path not found in the configuration file.")
+    sys.exit(1)
+
+VIA_path = config_data.get('VIA_path')
+if not VIA_path:
+    print("VIA path not found in the configuration file.")
+    sys.exit(1)
+
+quiq_df = pd.read_csv(csv_path, low_memory=False)
+filtered_quiq_df = quiq_df[quiq_df['Mapping_info_1'].str.contains('medical_code', na=False)]
+via_df = pd.read_csv(VIA_path, low_memory=False)
+unique_variable_names = filtered_quiq_df['Variable_name'].unique()
+matched_columns_df = via_df[via_df['Variable_name'].isin(unique_variable_names)][['Variable_name', 'Description']]
+unique_matched_columns_df = matched_columns_df.drop_duplicates(subset=['Variable_name'])
+
+variable_pattern_frequencies = defaultdict(Counter)
+for _ in range(10):
+    for _, row in unique_matched_columns_df.iterrows():
+        variable_name = row['Variable_name']
+        description = row['Description']
+        pattern_str = generate_regex_gpt4(variable_name, description)
+        if pattern_str:
+            variable_pattern_frequencies[variable_name][pattern_str] += 1
+
+regex_dict = {var: re.compile(patterns.most_common(1)[0][0]) for var, patterns in variable_pattern_frequencies.items() if patterns}
+validation_df = pd.DataFrame([{
+    "Variable": row['Variable_name'],
+    "Code": row['Value'],
+    "Valid": "True" if regex_dict.get(row['Variable_name'], re.compile('^$')).match(str(row['Value'])) else "False"
+} for index, row in filtered_quiq_df.iterrows()])
+
+response_text = validate_medical_codes_gpt4(unique_matched_columns_df, validation_df)
+if response_text and response_text.strip():
+    try:
+        response_df = parse_gpt_response_to_df(response_text)
+        if response_df.empty:
+            print("No valid data was returned to create DataFrame.")
+            sys.exit(1)
+        response_df['Result'] = response_df.apply(lambda x: f"{x['Variable']}\t{x['Code']}\t{x['Valid']}", axis=1)
+
+        # Calculate the validity percentage from the DataFrame
+        validity_percentage, valid_count, total_count = calculate_validity_percentage(response_df)
+        print(f"Code Validity: {validity_percentage:.2f}%")
+
+        # Prepare data for the text file
+        data_rows = [
+            "<Code Validity Summary>",
+            f"Code Validity Percentage: {validity_percentage:.2f}%",
+            f"Valid Codes: {valid_count}",
+            f"Total Codes: {total_count}",
+            "",
+            "<Summary Regular Expression Suggestion>"
+        ]
+
+        # Collecting regex suggestions
+        for variable_name in variable_pattern_frequencies:
+            for pattern, frequency in variable_pattern_frequencies[variable_name].items():
+                data_rows.append(f"Variable: {variable_name}\tPattern: {pattern}\tFrequency: {frequency}")
+
+        # Adding the most frequent regex patterns selected
+        data_rows.append("")
+        data_rows.append("<Most Frequent Regex Patterns Selected>")
+        for variable_name, patterns in variable_pattern_frequencies.items():
+            most_frequent_pattern, frequency = patterns.most_common(1)[0]
+            data_rows.append(f"Variable: {variable_name}\tSelected Pattern: {most_frequent_pattern}\tFrequency: {frequency}")
+
+        # Prepare the GPT model validation results
+        data_rows.append("")
+        data_rows.append("<Final Validation Results>")
+        response_df['Result'] = response_df.apply(lambda x: f"{x['Variable']}\t{x['Code']}\t{x['Valid']}", axis=1)
+        data_rows.extend(response_df['Result'].tolist())
+
+        # Save to text file
+        with open("결과_code_validity.txt", "w", encoding="utf-8") as text_file:
+            for row in data_rows:
+                text_file.write(row + "\n")
+
+        print("Detailed results are saved as '결과_code_validity.txt'")
+    except Exception as e:
+        print(f"An error occurred while processing the DataFrame: {e}")
         sys.exit(1)
-    else:
-        csv_file_path = sys.argv[1]
-        run(csv_file_path)
+else:
+    print("No response or invalid response text received from GPT-4.")
+    sys.exit(1)
