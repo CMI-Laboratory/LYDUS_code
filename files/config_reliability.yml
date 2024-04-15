@@ -1,0 +1,8 @@
+General_session_id: 1
+General_table_name: 20240411_df_standard_concat.csv
+Reliability_operation_type: manual
+Reliability_automatic_num: 2
+Reliability_target_variable: Creatinine
+Reliability_gpt_model_type: gpt-4
+Reliability_recommended_variable_num: 7
+Reliability_openai_key: #enter openai api key here
