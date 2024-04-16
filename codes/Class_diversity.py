@@ -1,7 +1,7 @@
 #!/usr/bin/env python
 # coding: utf-8
 
-# In[20]:
+# In[ ]:
 
 
 import pandas as pd
@@ -30,9 +30,10 @@ config_path = sys.argv[1]
 # Read configuration from config.yml
 config_data = read_yaml(config_path)
 csv_path = config_data.get('csv_path')
-
-
-
+if not csv_path:
+    print("CSV path not found in the configuration file.")
+    sys.exit(1)
+    
 def filter_categorical(df):
     #범주형 데이터만 선택
     # 조건 1: 값의 unique 개수가 2~50인 변수명 필터링
@@ -57,34 +58,32 @@ def filter_categorical(df):
     
     return final_df
 
+def extract_class_data_using_mapping(df):
+    
+    # Mapping_info_1 기준으로 필터링
+    class_diversity_mapping = ['event', 'diagnosis', 'prescription', 'procedure']
+    pattern = '|'.join(class_diversity_mapping)
+    df_mapping = df[df['Mapping_info_1'].str.contains(pattern, case=False, na=False)]
 
-def filter_data(df):
-    # 클래스 매핑 조건 정의
-    class_mapping = ['ICD9_Dx', 'ICD9_Px', 'ICD10_Dx', 'ICD10_Px']
+    #환자 정보 중 범주형 선택
+    patient_info = df[df['Mapping_info_1'].str.contains('Patient_info', case = False, na = False)]
+    patient_info_categorical = filter_categorical(patient_info)
     
-    # 클래스 매핑에 따른 데이터 필터링
-    class_mapping_df = df[df['Mapping_info_1'].isin(class_mapping) | df['Mapping_info_2'].str.contains('Drug', case=False, na=False)]
+    # 'Value'의 다양성 고려해야 하는 것: 환자 정보 중 범주형 및 medical code
+    medical_code = df[df['Mapping_info_1'].str.contains('code', case=False, na=False)]
+    categorical_df = pd.concat([medical_code, patient_info_categorical], axis=0, ignore_index=True)
+
+    # Prescription인 경우에 Mapping_info_2가 Drug이어야 함
+    condition_drug = (df_mapping['Mapping_info_1'].str.contains('prescription', case=False, na=False) &
+                      df_mapping['Mapping_info_2'].str.contains('drug', case=False, na=False))
+    condition_others = ~df_mapping['Mapping_info_1'].str.contains('prescription', case=False, na=False)
     
-    # 환자 데이터 구분
-    patient_info = df[df['Mapping_info_1']=='Patient_info']
-    patient_info_categorical = filter_categorical(patient_info)  # 범주형 데이터 필터링 함수는 정의되어 있어야 함
-    patient_info_non_categorical = patient_info[~patient_info['Variable_name'].isin(patient_info_categorical['Variable_name'])]
+    # 조건을 만족하는 데이터만 필터링
+    df_mapping = df_mapping[condition_drug | condition_others]
     
-    # class_mapping_df 중 'Mapping_info_1' 별로 'Variable_name'이 하나인 경우 처리
-    single_variable_names_in_class_mapping = class_mapping_df.groupby('Mapping_info_1')['Variable_name'].nunique()
-    single_variable_names_in_class_mapping = single_variable_names_in_class_mapping[single_variable_names_in_class_mapping == 1].index.tolist()
     
-    # 해당하는 모든 행을 class_mapping_df에서 제외
-    single_variable_df = class_mapping_df[class_mapping_df['Mapping_info_1'].isin(single_variable_names_in_class_mapping)]
-    class_mapping_df = class_mapping_df[~class_mapping_df['Mapping_info_1'].isin(single_variable_names_in_class_mapping)]
-    
-    # final_df_categorical에 추가
-    final_df_categorical = pd.concat([patient_info_categorical, single_variable_df], axis=0, ignore_index=True)
-    
-    # 최종 데이터프레임 결합
-    final_df_variable_name = pd.concat([class_mapping_df, patient_info_non_categorical], axis=0, ignore_index=True)
-    
-    return final_df_variable_name, final_df_categorical
+
+    return df_mapping, categorical_df
 
 
 def calculate_diversity(class_values):
@@ -116,17 +115,17 @@ def plot_class_counts(class_counts, title):
     safe_title = title.replace(" ", "_").replace("/", "_").replace("\\", "_")
     filename = f"{safe_title}_class_diversity.png"
     
-    #plt.savefig(filename) 
-    #plt.show()
+    plt.savefig(filename) 
+    plt.show()
 
 def calculate_and_plot_diversity(df, column_name):
     diversity_results = []
 
     def show_detail(unique_value, simpson_diversity_score, class_counts, class_num, total_num):  
         print(f"{unique_value}:")
-        print(f"  Class Simpson Diversity: {simpson_diversity_score}")
+        print(f"  Class Simpson Diversity: {simpson_diversity_score*100:.2f}%")
         print(f"  Number of Classes / Total Number of Data: {class_num} / {total_num}")
-        plot_class_counts(class_counts, f"{unique_value}")
+        #plot_class_counts(class_counts, f"{unique_value}")
     
     for unique_value in df[column_name].unique():
         filtered_df = df[df[column_name] == unique_value]
@@ -170,10 +169,10 @@ def save_diversity_results_to_csv(diversity_results, csv_file_path):
 
 def calculate_class_diversity_from_csv(csv_path):
     df = pd.read_csv(csv_path)
-    final_df_variable_name, final_df_categorical = filter_data(df)
+    target_column_df, final_df_categorical = extract_class_data_using_mapping(df)
     
     # 'Mapping_info_1'과 'Variable_name' 기준으로 다양성 계산 및 시각화
-    diversity_by_mapping_info = calculate_and_plot_diversity(final_df_variable_name, 'Mapping_info_1')
+    diversity_by_mapping_info = calculate_and_plot_diversity(target_column_df, 'Mapping_info_1')
     diversity_by_variable_name = calculate_and_plot_diversity(final_df_categorical, 'Variable_name')
 
     #가중 평균 다양성
@@ -183,14 +182,8 @@ def calculate_class_diversity_from_csv(csv_path):
     
     weighted_average_simpson = calculate_weighted_average_simpson_from_list(combined_diversity_results)
 
-    print(f"전체 데이터셋에 대한 가중평균 심슨 다양성: {weighted_average_simpson}")
+    print(f"Weighted average Simpson diversity: {weighted_average_simpson*100:.2f}%")
 
 
 calculate_class_diversity_from_csv(csv_path)
-
-
-# In[ ]:
-
-
-
 

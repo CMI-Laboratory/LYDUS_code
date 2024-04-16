@@ -1,7 +1,7 @@
 #!/usr/bin/env python
 # coding: utf-8
 
-# In[3]:
+# In[ ]:
 
 
 import pandas as pd
@@ -35,15 +35,18 @@ if not openai_api_key:
     print("OpenAI API key not found in the configuration file.")
     sys.exit(1)
 
+csv_path = config_data.get('csv_path')
+if not csv_path:
+    print("CSV path not found in the configuration file.")
+    sys.exit(1)
 
 OPENAI_API_KEY = openai_api_key
-csv_path = config_data.get('csv_path')
-
 
 # Setting Client
 client = openai.Client(api_key=OPENAI_API_KEY)
 os.environ["OPENAI_API_TYPE"] = "azure"
 warnings.filterwarnings('ignore')
+
 
 # target 변수 추출 함수
 def extract_date_data(df):
@@ -69,15 +72,13 @@ def extract_date_data(df):
     #time_or_date_type_df = df[df['Variable_type'].str.contains('time|date', case=False) & df['Value'].notna()][['Value']].copy()
     time_or_date_type_df['Original_index'] = time_or_date_type_df.index
     time_or_date_type_df.rename(columns={'Value': 'Date_value'}, inplace=True)
-    
-    
-    #단위가 없고, Value에 문자열 갯수 10 이하, digit 6개 이상인 행 필터링
+        
+    #단위가 없고, Value에 문자열 갯수 10 이하, digit 6개 이상인 행 선택
     df_filtered = df[df['Variable_type'].str.contains('string|str', case=False, na = False)]
     df_filtered = df_filtered[df_filtered['Unit'].isnull()]
     df_filtered = df_filtered[df_filtered['Value'].str.replace('[\d\W]+', '', regex=True).str.len() < 10]
     df_filtered = df_filtered[df_filtered['Value'].str.contains(r'(\d\D*){6,}', case=False, na=False)]
 
-    
     #3) 'Value'에 정규표현식 포함
     date_regex_df = df_filtered[df_filtered['Value'].str.contains(date_regex, case=False, regex=True) & df['Value'].notna()][['Value']].copy()
     date_regex_df['Original_index'] = date_regex_df.index
@@ -101,8 +102,30 @@ def extract_date_data(df):
     
     return final_date_df
 
+def extract_date_data_mapping(df):
+    
+    #1) 'Record_datetime' 데이터와 인덱스 추출
+    record_dates_df = df[['Record_datetime']].dropna().copy()
+    record_dates_df['Original_index'] = record_dates_df.index
+    record_dates_df.rename(columns={'Record_datetime': 'Date_value'}, inplace=True)
+    
+    
+    #2) Mapping_info_1 이 date 인 것
+    date_mapping_df = df[df['Mapping_info_1'].str.contains('date', case = False, na = False)]
+    date_mapping_df['Original_index'] = date_mapping_df.index
+    date_mapping_df.rename(columns={'Value': 'Date_value'}, inplace=True)
+    
+    combined_date_df = pd.concat([record_dates_df, date_mapping_df])
+    
+    # 'original index'와 'date value' 열을 가진 새로운 데이터프레임 생성
+    final_date_mapping_df = combined_date_df[['Original_index', 'Date_value']].reset_index(drop=True)
 
-
+    #최종 필터링
+    final_date_mapping_df = final_date_mapping_df.dropna(subset=['Date_value'])
+    final_date_mapping_df = final_date_mapping_df.drop_duplicates()
+    final_date_mapping_df = final_date_mapping_df.reset_index(drop=True)
+    
+    return final_date_mapping_df
 
 system_content = f"""We will evaluate the quality of the medical data.I want to verify that the date given is valid.
     Please answer with 'yes' or 'no'.
@@ -151,22 +174,30 @@ def validate_date_entry(row):
     #유효하지 않은 날짜
     else:
         user_content = f"{date_string}"
-        result = gpt_chat(client, system_content, user_content)
-        if "no" in result:
-            #print (row)
-            return row
-        else:
+        try:
+            result = gpt_chat(client, system_content, user_content)
+            if "no" in result:
+                return row
+            else:
+                return None
+        except Exception as e:
+            print("Failed to call GPT service:", e)
             return None
-
-
+        
+    
 def validate_dates(csv_file_name):
-    invalid_indexes = []
+    
 
     #날짜 변수명만 추출
     df = pd.read_csv(csv_file_name) 
-    final_date_df = extract_date_data(df)
+    #final_date_df = extract_date_data(df)
+    final_date_df = extract_date_data_mapping(df)
     
-    #print('날짜 추출 완료')
+    if final_date_df.empty:
+        print("No date data available.")
+        return None
+    
+    invalid_indexes = []
     
     # 각 행에 대해 날짜 유효성 검증 수행
     for index, row in final_date_df.iterrows():
@@ -185,19 +216,13 @@ def validate_dates(csv_file_name):
     date_validation = (len(invalid_date_df))/(len(final_date_df))
     
     #유효하지 않은 데이터 수 , 전체 데이터 수 출력
-    print('유효하지 않은 날짜 수 / 전체 날짜 수 : ', len(invalid_date_df),'/', len(final_date_df))
-    date_validation = 1- round(date_validation, 4)
-    print("날짜 유효성:",date_validation)
+    print('Number of invalid dates / Total number of dates : ', len(invalid_date_df),'/', len(final_date_df))
+    date_validation_percentage = (1 - round(date_validation, 4)) * 100
+    print(f"Date_validation: {date_validation_percentage:.2f}%")
     
 
     return invalid_date_df
     
         
 validate_dates(csv_path)
-
-
-# In[ ]:
-
-
-
 

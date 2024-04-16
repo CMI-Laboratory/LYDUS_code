@@ -1,7 +1,7 @@
 #!/usr/bin/env python
 # coding: utf-8
 
-# In[1]:
+# In[ ]:
 
 
 import openai
@@ -10,6 +10,7 @@ import pandas as pd
 import numpy as np
 import datetime
 from dateutil.parser import parse
+
 import re
 import matplotlib.pyplot as plt
 import statsmodels.api as sm
@@ -35,39 +36,73 @@ config_path = sys.argv[1]
 
 # Read configuration from config.yml
 config_data = read_yaml(config_path)
-
 csv_path = config_data.get('csv_path')
+if not csv_path:
+    print("CSV path not found in the configuration file.")
+    sys.exit(1)
+
+min_percentile = config_data.get('min_percentile', 10)
+mul = config_data.get('mul', 2)
+min_patient_count = config_data.get('min_patient_count', 100)
 
 
-
-# 매핑데이터 이용 변수 수출
-def extract_data_using_mapping(df, min_patient_count = 100):
-    df_filtered = df[df['Patient_number'].notnull() & df['Record_datetime'].notnull()]
-    variable_counts = df_filtered.groupby('Variable_name')['Patient_number'].count().sort_values(ascending=False)
-    df_valid_counts = df_filtered[df_filtered['Variable_name'].isin(variable_counts[variable_counts >= min_patient_count].index)]
-    time_series_mapping = ['ICD9_Dx', 'ICD9_Px', 'ICD10_Dx', 'ICD10_Px', 'Events']
-    df_mapping = df_valid_counts[df_valid_counts['Mapping_info_1'].isin(time_series_mapping) | df_valid_counts['Mapping_info_2'].str.contains('Drug', case=False, na=False)] 
-    return df_mapping
-
-
-
-#지표 계산
-def time_series(csv):
-    col_name = 'Variable_name'
-    date_col_name = 'Record_datetime'
-    df=pd.read_csv(csv)
-
-    #GPT 이용한 변수 추출
-    #target_df = extract_target_data(df)
-    #매핑 이용한 변수 수출
-    target_df = extract_data_using_mapping(df)
+# 매핑데이터 이용
+def extract_data_using_mapping(df, min_patient_count=100):
     
-    target_df[date_col_name] = pd.to_datetime(target_df[date_col_name], errors='coerce')
+    # Mapping_info_1 기준으로 필터링
+    time_series_mapping = ['event', 'diagnosis', 'medical_code', 'prescription', 'procedure']
+    pattern = '|'.join(time_series_mapping)
+    df_mapping = df[df['Mapping_info_1'].str.contains(pattern, case=False, na=False)]
 
-    unique_values = target_df[col_name].dropna().unique()
+    # Prescription인 경우에 Mapping_info_2가 Drug이어야 함
+    condition_drug = (df_mapping['Mapping_info_1'].str.contains('prescription', case=False, na=False) &
+                      df_mapping['Mapping_info_2'].str.contains('drug', case=False, na=False))
+    condition_others = ~df_mapping['Mapping_info_1'].str.contains('prescription', case=False, na=False)
+    
+    # 조건을 만족하는 데이터만 필터링
+    df_mapping = df_mapping[condition_drug | condition_others]
+    
+    # medical_code의 특수성 고려하여 새로운 구조의 df 생성
+    new_structure = df_mapping.copy()
+    new_structure['Target_column'] = np.where(
+        new_structure['Mapping_info_1'].str.contains('code', case=False, na=False),
+        new_structure['Value'],
+        new_structure['Variable_name']
+    )
+    
+    # 필요한 칼럼만 선택
+    final_columns = [
+        'Primary_key', 'Variable_ID', 'Original_table_name', 'Target_column',
+        'Record_datetime', 'Variable_type', 'Patient_number', 'Admission_number', 
+        'Mapping_info_1', 'Mapping_info_2'
+    ]
+    new_structure = new_structure[final_columns]
+
+    # 'Record_datetime' 열을 datetime 객체로 변환
+    new_structure['Record_datetime'] = pd.to_datetime(new_structure['Record_datetime'], errors='coerce')
+
+    # 날짜로 변환에 실패한 데이터 (NaT 포함된 행) 제거
+    new_structure = new_structure[new_structure['Record_datetime'].notna()]
+    
+    # 유니크한 Patient_number의 수를 기준으로 필터링
+    df_filtered = new_structure[new_structure['Patient_number'].notnull()]
+    variable_counts = df_filtered.groupby('Target_column')['Patient_number'].nunique().sort_values(ascending=False)
+    df_valid_counts = df_filtered[df_filtered['Target_column'].isin(variable_counts[variable_counts >= min_patient_count].index)]
+
+    return df_valid_counts
+
+
+def time_series(df, min_patient_count):
+    col_name = 'Target_column'
+    date_col_name = 'Record_datetime'
+
+    #target_df = extract_target_data(df)
+    target_df = extract_data_using_mapping(df, min_patient_count)
+    
  
-    yearly_counts = target_df.groupby([col_name, target_df[date_col_name].dt.year]).size().unstack()
+    yearly_counts = target_df.groupby([col_name, target_df[date_col_name].dt.year])['Patient_number'].nunique().unstack()
     return yearly_counts
+
 
 def detect_change_points_v3(data, variable_name, years, p=1, d=1, q=0, mul=2, min_percentile=10):
     
@@ -101,11 +136,11 @@ def detect_change_points_v3(data, variable_name, years, p=1, d=1, q=0, mul=2, mi
 
     # 변화점 탐지 함수 (최소 5% percentile 보다는 커야하고, 양옆의 평균의 2배 이상)
     def is_change_point(i, change_points, data, mul, min_percentile):
+        if (change_points[i] < np.percentile(data, min_percentile) or change_points[i] <5 ):  # 추가된 조건
+            return False
         if i == 0 or i == len(change_points) - 1:  # 첫 번째 또는 마지막 데이터 포인트인 경우
             if i == len(change_points) - 1:  # 마지막 포인트
                 return change_points[i] > 2 * change_points[i-1]
-            return False
-        if (change_points[i] < np.mean(data)*0.2) or(change_points[i] < np.percentile(data, min_percentile) or change_points[i] <5 ):  # 추가된 조건
             return False
         avg = (change_points[i-1] + change_points[i+1]) / 2
         return change_points[i] > mul * avg
@@ -134,9 +169,8 @@ def detect_change_points_v3(data, variable_name, years, p=1, d=1, q=0, mul=2, mi
         ax2.scatter([years[i] for i in high_value_indices], [change_points[i] for i in high_value_indices], color='red', label='ChangePoint')
         ax2.set_xlabel('Index')
         ax2.set_ylabel('Diff between prediction')
-        ax2.set_title('Change Points with threshold')
+        ax2.set_title('Frequency diff between prediction')
         ax2.legend()
-
         ax2.set_xticks(years)  # 년도를 x축 눈금으로 설정
         ax2.set_xticklabels(years, rotation=45)
 
@@ -148,15 +182,16 @@ def detect_change_points_v3(data, variable_name, years, p=1, d=1, q=0, mul=2, mi
 
     
     def show_detail():
-        print(f"\n\n분석 대상 변수명: {variable_name}\n")
+        print(f"\n\nTarget Variable: {variable_name}\n")
         draw_and_save_graphs()
-        print(f"{variable_name}에 대한 change point의 개수: {len(high_value_indices)}\n")
-    #그래프 출력
+        print(f"Number of change points for <{variable_name}>: {len(high_value_indices)}\n")
+
     show_detail()
     return high_value_indices
 
-def calculate_time_consistency(csv, p=1, d=1, q=0, mul=2, min_percentile=10):
-    df_result = time_series(csv)
+def calculate_time_consistency(csv, p=1, d=1, q=0, mul=2, min_percentile=10, min_patient = 100):
+    df=pd.read_csv(csv)
+    df_result = time_series(df, min_patient)
     df_result.fillna(0, inplace=True)
     years = df_result.columns
     
@@ -165,20 +200,15 @@ def calculate_time_consistency(csv, p=1, d=1, q=0, mul=2, min_percentile=10):
 
     for idx in df_result.index:
         data = df_result.loc[idx].values
-        change_points_indices = detect_change_points_v3(data, idx, years, p, d, q, mul, min_percentile)
+        change_points_indices = detect_change_points_v3(data, idx, years, p=1, d=1, q=0, mul=2, min_percentile=10)
 
         if change_points_indices:  # changepoints가 발생한 경우
             count_with_change_points += 1
 
     percentage_with_change_points = (count_with_change_points / len(df_result.index))
-    time_series_consistency = 1 - percentage_with_change_points
-    print(f"변화점 있는 변수 개수 / 전체 변수 개수: {count_with_change_points} / {len(df_result.index)} ")
-    print(f"시계열적 일관성: {time_series_consistency:.2f}")
+    time_series_consistency = (1 - percentage_with_change_points) * 100
+    print(f"Number of variables with change points / Total number of variables: {count_with_change_points} / {len(df_result.index)}")
+    print(f"Time series consistency: {time_series_consistency:.2f}%")
 
-calculate_time_consistency(csv_path)
-
-
-
-
-
+calculate_time_consistency(csv_path, mul = mul, min_percentile = min_percentile, min_patient= min_patient_count)
 

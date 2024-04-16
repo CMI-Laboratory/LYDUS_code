@@ -38,17 +38,23 @@ if not openai_api_key:
     print("OpenAI API key not found in the configuration file.")
     sys.exit(1)
 
+csv_path = config_data.get('csv_path')
+if not csv_path:
+    print("CSV path not found in the configuration file.")
+    sys.exit(1)    
+    
 # Read new configuration options
-save_output = config_data.get('save_output', False)  # Defaults to False if not specified
+#save_output = config_data.get('save_output', True)  # Defaults to True if not specified
+save_output = True
 show_details = config_data.get('show_details', True)  # Defaults to True if not specified
 
+
 OPENAI_API_KEY = openai_api_key
-csv_path = config_data.get('csv_path')
+
 
 os.environ["OPENAI_API_KEY"] = OPENAI_API_KEY
 os.environ["OPENAI_API_TYPE"] = "azure"
 client = openai.Client(api_key=OPENAI_API_KEY)
-
 
 
 def filter_dataframe(df):
@@ -109,7 +115,7 @@ system_content = f"""We will evaluate the quality of the medical data. I will gi
 
 
 
-def gpt_chat(client, system_content, user_content, temperature=0, max_tokens=1000, n=1):
+def llm_chat(client, system_content, user_content, temperature=0, max_tokens=1000, n=1):
     response = client.chat.completions.create(
         model="gpt-3.5-turbo",
         messages=[
@@ -122,10 +128,12 @@ def gpt_chat(client, system_content, user_content, temperature=0, max_tokens=100
     )
     return [choice.message.content for choice in response.choices]
 
-def parse_gpt_response_by_line(response, unique_array):
-    # GPT 응답을 줄별로 파싱하여 2D 배열 생성
+def parse_llm_response_by_line(response, unique_array):
+    # LLM 응답을 줄별로 파싱하여 2D 배열 생성
     lines = response.strip().split('\n')
     array_2d = []
+    # unique_array에서 공백을 제거
+    unique_array = [item.strip() for item in unique_array]
     for line in lines:
         # 각 줄에서 ':' 문자가 있는지 확인
         if ':' in line:
@@ -138,20 +146,24 @@ def parse_gpt_response_by_line(response, unique_array):
     return array_2d
 
 
-def get_category_counts(unique_array):
-    
+def get_category_counts(df, unique_array, attempt=1):
     user_content = ', '.join(unique_array.tolist())
-    result = gpt_chat(client, system_content, user_content)
+    result = llm_chat(client, system_content, user_content)
     response_text = result[0] if result else ""
     
-    #print(response_text)
-    array_2d = parse_gpt_response_by_line(response_text, unique_array)
+    array_2d = parse_llm_response_by_line(response_text, unique_array)
     
     category_counts = {}
     for category in array_2d:
         category_counts[category[0]] = len(category)
 
-    return array_2d, category_counts
+    # 유효성 검사: 반환된 분류 내용이 데이터에 실제로 존재하는지 확인
+    valid = any(df['Value'].isin([item for sublist in array_2d for item in sublist]))
+    if not valid and attempt < 5:  # 재시도 로직
+        #print("No valid data matched with LLM categories, retrying classification...")
+        return get_category_counts(df, unique_array, attempt + 1)
+    
+    return array_2d, category_counts, valid
 
 
 
@@ -159,83 +171,108 @@ def calculate_inner_consistency(array_2d, df):
     total_weighted_percentage = 0
     total_weight = 0
     
-    for line in array_2d:  # lines 대신 array_2d 사용
+    for line in array_2d:  
         count_by_col = df['Value'].apply(lambda x: x if x in line else None).value_counts().dropna()
         
-        for value, count in count_by_col.items():
-            max_percentage = count / count_by_col.sum()
-            weighted_percentage = max_percentage * count
-            total_weighted_percentage += weighted_percentage
-        
-        total_weight += count_by_col.sum()
+        total_counts = count_by_col.sum()
+        if total_counts > 0:
+            for value, count in count_by_col.items():
+                max_percentage = count / total_counts
+                weighted_percentage = max_percentage * count
+                total_weighted_percentage += weighted_percentage
+            
+            total_weight += total_counts
+        else:
+            print(f"Warning: No data matched for line items {line} in df['Value'].")
+            # 여기서 다시 LLM 호출이 필요할 경우 로직 추가
+            return None  # 혹은 적절한 오류 처리
+
     if total_weight == 0:
-        return 0  #오류 처리
-    else:
-        return total_weighted_percentage / total_weight    
-    
+        print("Total weight is zero, which indicates no valid data was processed for any categories.")
+        return None  # 분모가 0인 경우 None 반환하거나 적절한 값 반환
+
+    return (total_weighted_percentage / total_weight)*100
+        
+        
 
 
-def show_detail(variable_name, consistency_value, array_2d, category_counts, save_output=False, show_details=True, file=None):
-    lines = []  # 출력할 내용을 저장할 리스트
-    detail_line = f"<<<{variable_name}의 일관성 detail>>>\n변수명 \"{variable_name}\"의 일관성: {consistency_value}\n"
-    lines.append(detail_line)
-
+def show_detail(array_2d, category_counts, output_file=None):
     for category in array_2d:
         category_name = category[0]
         count = category_counts[category_name]
         items = ', '.join(category)
-        line = f"{category_name}: {count}개 - 항목: {items}\n"
-        lines.append(line)
-    
-    if save_output and file is not None:
-        for line in lines:
-            file.write(line)
-        file.write("\n")  # 세부 사항 출력 후 빈 줄 추가
-    
-    if show_details:
-        for line in lines:
-            print(line, end='')
-        print("\n")  # 세부 사항 출력 후 빈 줄 추가
+        line = f"{category_name}: {count} items - Includes: {items}\n"
+        
+        if output_file:
+            output_file.write(line)
+        print(line, end='')
 
-
-def calculate_consistency(csv_file_name, save_output=False, show_details=True):
+def calculate_consistency(csv_file_name, save_output, show_details):
     df = pd.read_csv(csv_file_name)
+    
     target_df = filter_dataframe(df)
     target_vars = target_df['Variable_name'].unique()
-    # 예로 5개만 선택
-    target_vars = np.random.choice(target_vars, size=5, replace=False)
+    #target_vars = np.random.choice(target_vars, size=100, replace=False)
     
     total_consistency = 0
     count_vars = 0
 
-    output_file = None
-    if save_output:
-        output_file = open('Voca_consistency_details.txt', 'w', encoding='utf-8')
-    
-    for TARGET_VARIABLE in target_vars:
-        unique_array = target_df[target_df['Variable_name'] == TARGET_VARIABLE]['Value'].dropna().unique()
-        array_2d, category_counts = get_category_counts(unique_array)
-        consistency_value = calculate_inner_consistency(array_2d, target_df[target_df['Variable_name'] == TARGET_VARIABLE])
+    output_file_path = 'consistency_details.txt' if save_output else None
+    output_file = open(output_file_path, 'w', encoding='utf-8') if output_file_path else None
 
-        show_detail(TARGET_VARIABLE, consistency_value, array_2d, category_counts, save_output, show_details, output_file)
+    try:
+        for TARGET_VARIABLE in target_vars:
+            unique_array = target_df[target_df['Variable_name'] == TARGET_VARIABLE]['Value'].dropna().unique()
+            array_2d, category_counts, valid = get_category_counts(target_df, unique_array)
+            if not valid:  # 유효하지 않은 경우 다시 시도
+                continue
 
-        total_consistency += consistency_value
-        count_vars += 1
-
-    if count_vars > 0:
-        average_consistency = total_consistency / count_vars
-        summary = f'전체 평균 일관성: {average_consistency:.4f}\n'
-    else:
-        summary = '계산할 변수명이 없습니다.\n'
-
-    print(summary)  # 프롬프트에 항상 출력
-    if save_output and output_file is not None:
-        output_file.write(summary)  # 파일에 저장
-        output_file.close()  # 파일 작업 종료
-
-
+            consistency_value = calculate_inner_consistency(array_2d, target_df[target_df['Variable_name'] == TARGET_VARIABLE])
+            if consistency_value is None:  # 계산 실패 처리
+                continue
             
-calculate_consistency(csv_path, save_output=save_output, show_details=show_details)
+            
+            if show_details:
+                detail = f'<<<Consistency Details for {TARGET_VARIABLE}>>>\n'
+                if output_file:
+                    output_file.write(detail)
+                print(detail, end='')
+
+                consistency_detail = f'Consistency of "{TARGET_VARIABLE}": {consistency_value:.2f}%\n'
+                if output_file:
+                    output_file.write(consistency_detail)
+                print(consistency_detail, end='')
+
+                # Call show_detail with output_file if needed
+                show_detail(array_2d, category_counts, output_file)
+                if output_file:
+                    output_file.write("\n")
+                print("\n", end='')
+
+            total_consistency += consistency_value
+            count_vars += 1
+
+        if count_vars > 0:
+            average_consistency = (total_consistency / count_vars)
+            summary = f'Total average consistency: {average_consistency:.2f}%\n'
+            if output_file:
+                output_file.write(summary)
+            print(summary)
+        else:
+            no_vars_msg = 'No variables to calculate.\n'
+            if output_file:
+                output_file.write(no_vars_msg)
+            print(no_vars_msg)
+    finally:
+        if output_file:
+            output_file.close()
+            
+            
+calculate_consistency(csv_path, save_output, show_details)
+
+
+# In[ ]:
+
 
 
 

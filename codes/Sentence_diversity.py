@@ -10,6 +10,7 @@ from nltk.tokenize import word_tokenize
 from nltk.tag import pos_tag
 from collections import Counter
 import matplotlib.pyplot as plt
+import string
 import warnings
 import yaml
 import sys
@@ -33,10 +34,15 @@ config_path = sys.argv[1]
 # Read configuration from config.yml
 config_data = read_yaml(config_path)
 csv_path = config_data.get('csv_path')
+if not csv_path:
+    print("CSV path not found in the configuration file.")
+    sys.exit(1)
+    
+top_n = config_data.get('top_n', 10)
 
 
 def custom_sent_tokenize(text):
-    if not isinstance(text, str):
+    if not isinstance(text, str) or not text.strip():
         return []
     return re.split(r'(?<!\n)\n{2,}|[^\w\s\n,]+', text)
 
@@ -53,6 +59,8 @@ def verb_sentence(text):
     return verb_sentences
 
 def counter_topn_items(total_count, total_counter, top_n=10):
+    if total_count == 0:  # To avoid division by zero
+        return [], []
     top_n_items = total_counter.most_common(top_n)
     top_items = []
     top_n_percentages = []
@@ -62,54 +70,67 @@ def counter_topn_items(total_count, total_counter, top_n=10):
         top_n_percentages.append(percentage)
     return top_items, top_n_percentages
 
-def plot_top_n_items(top_items, percentages):
-    plt.bar(top_items, percentages)
+
+def plot_top_n_items(top_items, percentages, top_n=10):
+    if not top_items:
+        print("No data to plot.")
+        return
+    plt.figure(figsize=(10, 5))
+    plt.bar(top_items, percentages)  # Ensure 'percentages' are scaled from 0 to 100 if not already
     plt.xlabel('Items')
-    plt.ylabel('Percentage')
-    plt.title('Top 10 Items by Percentage')
+    plt.ylabel('Percentage (%)')  # Specify that the y-axis is in percentage
+    plt.title(f'Top {top_n} Sentences by Percentage')
     plt.xticks(rotation=45)
-    plt.savefig('sentence_diversity.png')
+    #plt.tight_layout()  # Adjust layout to make room for tick labels
+    plt.savefig(f'top_{top_n}_sentences.png')
     plt.show()
 
 def percentage_top_items(total_count, total_counter, percentage):
-    top_items_count = int(total_count * percentage / 100)
+    if total_count == 0:
+        return 0
+    top_items_count = int(total_count * (percentage / 100))
     sorted_items = total_counter.most_common()
     top_items_sum = sum(count for _, count in sorted_items[:top_items_count])
-    percentage_top_items = (top_items_sum / total_count) * 100
-    return percentage_top_items
+    return (top_items_sum / total_count) * 100
 
-def show_detail(total_sentences, total_counter, total_count, top_n = 10):
+def show_detail(total_sentences, total_counter, total_count, top_n=10):
     top_n_items, top_n_percentages = counter_topn_items(total_count, total_counter, top_n)
-    plot_top_n_items(top_n_items, top_n_percentages)
+    plot_top_n_items(top_n_items, top_n_percentages, top_n)
     
     top_percentages = [5, 10, 20]
-    coverage_scores = {}
     for percentage in top_percentages:
-        coverage_scores[percentage] = percentage_top_items(total_count, total_counter, percentage)
-
-    for percentage, score in coverage_scores.items():
-        print(f"상위 {percentage}% 항목이 전체의 {score:.2f}%를 차지합니다.")
+        score = percentage_top_items(total_count, total_counter, percentage)
+        print(f"Top {percentage}% of items account for {score:.2f}% of the total.")
 
 # 주 함수
-def calculate_sentence_diversity(csv_file):
-    df = pd.read_csv(csv_file, low_memory=False)
+def calculate_sentence_diversity(csv_file, top_n=10):
+    try:
+        df = pd.read_csv(csv_file, low_memory=False)
+        if 'Mapping_info_1' not in df or 'Value' not in df:
+            print("Required columns are missing in the dataset.")
+            return
+    except FileNotFoundError:
+        print("The CSV file was not found.")
+        return
+
     df_note = df[df['Mapping_info_1'].str.contains('note', na=False, case=False)]
+    if df_note.empty:
+        print("No 'note' related records found.")
+        return
     
-    col_name = 'Value'
-    df_note['TEXT_Verb'] = df_note[col_name].apply(verb_sentence)
+    df_note['TEXT_Verb'] = df_note['Value'].apply(verb_sentence)
     total_sentences = [sentence for sublist in df_note['TEXT_Verb'].tolist() for sentence in sublist]
+
+    if not total_sentences:
+        print("No sentences with verbs were found.")
+        return
     
     unique_sentence_count = len(set(total_sentences))
     total_count = len(total_sentences)
-    total_counter = Counter(total_sentences)
+    sen_diversity = (unique_sentence_count / total_count) * 100
+    print(f"Sentence Diversity: {sen_diversity:.2f}%")
 
-    sen_diversity = unique_sentence_count / total_count
-    print("문장의 다양성:", sen_diversity)
+    show_detail(total_sentences, Counter(total_sentences), total_count, top_n)
 
-    # 필요한 경우 아래 라인의 주석을 해제하여 세부 정보를 출력
-    top_n = 10
-    show_detail(total_sentences, total_counter, total_count, top_n)
-
-
-calculate_sentence_diversity(csv_path)
+calculate_sentence_diversity(csv_path, top_n)
 
