@@ -1,7 +1,7 @@
 #!/usr/bin/env python
 # coding: utf-8
 
-# In[1]:
+# In[ ]:
 
 
 import numpy as np
@@ -15,7 +15,6 @@ import yaml
 import sys
 
 warnings.filterwarnings(action='ignore') 
-
 
 def read_yaml(file_path):
     with open(file_path, 'r', encoding='utf-8') as file:  
@@ -34,14 +33,24 @@ config_path = sys.argv[1]
 config_data = read_yaml(config_path)
 
 csv_path = config_data.get('csv_path')
+if not csv_path:
+    print("CSV path not found in the configuration file.")
+    sys.exit(1)
+
+maximum_class_n = config_data.get('maximum_class_n', 10) 
 
 
 def calculation(y_true, y_pred):
     # Calculate metrics
     accuracy = accuracy_score(y_true, y_pred)
-    precision = precision_score(y_true, y_pred, average='macro')
-    recall = recall_score(y_true, y_pred, average='macro')
-    f1score = f1_score(y_true, y_pred, average='macro')
+    try:
+        precision = precision_score(y_true, y_pred, average='macro')
+        recall = recall_score(y_true, y_pred, average='macro')
+        f1score = f1_score(y_true, y_pred, average='macro')
+    except ValueError as e:
+        print("Error in metric calculation:", e)
+        return
+    
     
     lb = LabelBinarizer()
     y_true_binary = lb.fit_transform(y_true)
@@ -65,16 +74,22 @@ def calculation(y_true, y_pred):
 
     
     def show_detail():
-        print('Accuracy:', accuracy)
-        print('Precision:', precision)
-        print('Recall:', recall)
-        print('f1 score:', f1score)
-        print("AUROC: %f" % mean_auc)
+        print(f'Accuracy: {accuracy*100:.2f}%')
+        print(f'Precision: {precision*100:.2f}%')
+        print(f'Recall: {recall*100:.2f}%')
+        print(f'F1 Score: {f1score*100:.2f}%')
+        print(f"AUROC: {mean_auc*100:.2f}%")
         
-    print('Accuracy:', accuracy)
-    #show_detail()
+    show_detail()
 
-def save_graphs(y_true, y_pred):
+def save_graphs(y_true, y_pred, n):
+    unique_labels = np.union1d(np.unique(y_true), np.unique(y_pred))
+    
+    if len(unique_labels) > n:
+        print(f"Graphs for the confusion matrix and AUROC are not displayed because the number of classes exceeds {n}.")
+        return
+    
+    
     fig, axes = plt.subplots(nrows=1, ncols=2, figsize=(15, 5))
 
     # Confusion Matrix
@@ -114,27 +129,25 @@ def save_graphs(y_true, y_pred):
     plt.show()
     plt.close()
     
-def calculate_accuracy(csv):
+def calculate_accuracy(csv, n):
     df = pd.read_csv(csv)
-    # 어노테이션 값이 null 이 아닌 row만 선택
-    target_df = df[df['Annotation_value'].notnull() & df['Value'].notnull()]
+    
+    # Ground_truth 값이 null 이 아닌 row만 선택
+    target_df = df[df['Ground_truth'].notnull() & df['Value'].notnull()]
     
     if target_df.empty:
-        print('해당 없음')
+        print('No data to calculate Accuracy, Precision, Recall, F1 Score, AUROC.')
         return
     
     target_df['Value'] = target_df['Value'].astype(str)
-    target_df['Annotation_value'] = target_df['Annotation_value'].astype(str)
-    y_true  = target_df['Value']
-    y_pred = target_df['Annotation_value']
+    target_df['Ground_truth'] = target_df['Ground_truth'].astype(str)
+    y_true  = target_df['Ground_truth']
+    y_pred = target_df['Value']
     
     calculation(y_true, y_pred)
-    save_graphs(y_true, y_pred)
+    save_graphs(y_true, y_pred, n)
 
 
 
-calculate_accuracy(csv_path)
-
-
-
+calculate_accuracy(csv_path, maximum_class_n)
 
