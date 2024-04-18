@@ -1,0 +1,7 @@
+#Config
+
+open_api_key: "sk-0000"
+csv_path: "C:\\Users\\Lydus\\QUIQ_table.csv"
+
+#Accuracy
+maximum_class_n: 10
