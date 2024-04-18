@@ -1,0 +1,8 @@
+#Config
+csv_path: "C:\\Users\\Lydus\\QUIQ_table.csv"
+
+#Time_consistency
+mul: 2
+min_percentile: 10
+min_patient_count: 100
+
