@@ -1,7 +1,7 @@
 #main 
 csv_path: "/Users/Desktop/QUIQ_table.csv"
 VIA_path: "/Users/Desktop/VIA_table.csv"
-result_save_path: "/Users/Desktop/LYDUS"
+save_path: "/Users/Desktop/LYDUS"
 open_api_key: sk-0000
 
 #신뢰도(Reliability)
