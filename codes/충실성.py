@@ -73,4 +73,7 @@ if __name__ == "__main__":
     if len(sys.argv) != 2:
         print("Usage: python script_name.py <csv_file_path>")
     else:
-        run(sys.argv[1])
+        config_path = (sys.argv[1])
+        config_data = read_yaml(config_path)
+        csv_path = config_data.get('csv_path')
+        run(csv_path)
