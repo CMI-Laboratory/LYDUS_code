@@ -189,6 +189,9 @@ Output Format: timepoint_pairs = [
 # Initialize timepoint pairs
 timepoint_pairs = []
 
+# Save the results and details
+save_path = config_data.get('save_path', '.')
+
 try:
     # OpenAI GPT-4 API call logic
     response = openai.ChatCompletion.create(
@@ -205,9 +208,16 @@ try:
     )
     print("API call successful.")
     # Extract timepoint_pairs string from API response and parse
-    start_of_list = response.choices[0].message.content.find('[')
-    timepoint_pairs_str = response.choices[0].message.content[start_of_list:]
+    gpt_output = response.choices[0].message.content
+    start_of_list = gpt_output.find('[')
+    timepoint_pairs_str = gpt_output[start_of_list:]
     timepoint_pairs = ast.literal_eval(timepoint_pairs_str)
+
+    # Save GPT output to gpt_output.txt in the "Sequence Validity" folder
+    sequence_validity_folder = os.path.join(save_path, "Sequence Validity")
+    os.makedirs(sequence_validity_folder, exist_ok=True)
+    with open(os.path.join(sequence_validity_folder, "gpt_output.txt"), 'w') as f:
+        f.write(gpt_output)
 
 except SyntaxError as e:
     print(f"Syntax error while parsing timepoint pairs: {e}")
@@ -225,5 +235,4 @@ validity_percentage, errors_count, valid_records_count, errors_details, total_ch
 rounded_validity_percentage = round(validity_percentage, 2)
 
 # Save the results and details
-save_path = config_data.get('save_path', '.')
 save_results_and_details(save_path, rounded_validity_percentage, total_checked_records, valid_records_count, errors_count, errors_details)
