@@ -11,8 +11,8 @@ def main(config_path):
     csv_path = config['csv_path']
     save_path = config['save_path']
 
-    # Create a folder called "completeness" in the save path
-    completeness_folder = os.path.join(save_path, 'completeness')
+    # Create a folder called "Completeness" in the save path
+    completeness_folder = os.path.join(save_path, 'Completeness')
     os.makedirs(completeness_folder, exist_ok=True)
 
     # Read CSV into DataFrame
