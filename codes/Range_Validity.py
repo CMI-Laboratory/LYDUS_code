@@ -39,10 +39,10 @@ config_yml_name = sys.argv[1]
 with open(f'{config_yml_name}',encoding='utf-8') as f:
     config_dict = yaml.load(f, Loader=yaml.FullLoader)
 
-session_id = config_dict['General_session_id']
+session_id = str(1)
 boxplotnum = config_dict['Rangevalidity_boxplotnum']
 
-lab_table_name = config_dict['General_table_name']
+lab_table_name = config_dict['csv_path']
 
 lab_table_item_column_name = 'Variable_ID'
 lab_table_label_column_name = 'Variable_name'
