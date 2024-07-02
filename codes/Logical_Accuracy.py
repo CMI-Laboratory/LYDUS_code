@@ -26,7 +26,7 @@ import sys
 import glob
 from google.cloud import bigquery
 from google.oauth2 import service_account
-import openai
+from openai import OpenAI
 import random
 import matplotlib.pyplot as plt
 import warnings
@@ -41,13 +41,14 @@ with open(f'{config_yml_name}',encoding='utf-8') as f:
 
 operation_type = config_dict['Reliability_operation_type']
 automatic_num = config_dict['Reliability_automatic_num']
-openai.api_key = config_dict['Reliability_openai_key']
+os.environ["OPENAI_API_KEY"] = config_dict['open_api_key']
+
 target_variable = config_dict['Reliability_target_variable']
 gpt_model_type = config_dict['Reliability_gpt_model_type']
 recommended_variable_num = config_dict['Reliability_recommended_variable_num']
 
-table_name = config_dict['General_table_name']
-session_id = config_dict['General_session_id']
+table_name = config_dict['csv_path']
+session_id = str(1)
 
 table_item_column_name = 'Variable_ID'
 table_label_column_name = 'Variable_name'
@@ -74,7 +75,9 @@ def query_gpt(target_variable, gpt_model_type, recommended_variable_num, labelte
             {"role": "user", "content": usercontent}
         ]
 
-    completion=openai.ChatCompletion.create(model=gpt_model_type, messages=messages)
+    #completion=openai.ChatCompletion.create(model=gpt_model_type, messages=messages)
+    client = OpenAI()
+    completion=client.chat.completions.create(model=gpt_model_type, messages=messages)
 
 
     aa=completion.choices[0].message.content
@@ -83,8 +86,8 @@ def query_gpt(target_variable, gpt_model_type, recommended_variable_num, labelte
 df=pd.read_csv(table_name,low_memory=False)
 newcolumns=['Primary_key','Variable_ID','Variable_category','Variable_name','Record_datetime','Value','Unit','Variable_type','Recorder','Recorder_position','Recorder_affiliation','Patient_number','Admission_number','Annotation_value','Mapping_info_1','Mapping_info_2']
 df.columns=newcolumns
-df=df[df['Mapping_info_1']=='Events']
-df = df[df['Mapping_info_2'].isin(['lab_events'])]
+df = df[df['Mapping_info_1'].fillna('').str.contains('event', case=False)]
+#df = df[df['Mapping_info_2'].isin(['lab_events'])]
 df.reset_index(inplace=True,drop=True)
 
 
