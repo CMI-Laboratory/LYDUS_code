@@ -1,4 +1,3 @@
-
 import pandas as pd
 from openai import OpenAI
 import ast  
@@ -11,24 +10,24 @@ import matplotlib.pyplot as plt
 import seaborn as sns
 
 
-
 def run_clinical():
     os.chdir(os.path.dirname(os.path.abspath(__file__)))
     
-    with open("config.yml", 'r') as ymlfile:
+    with open("config_all.yml", 'r') as ymlfile:
         cfg = yaml.load(ymlfile, Loader=yaml.FullLoader)
 
     save_path= cfg['save_path']
 
     try:
-        os.mkdir(save_path + 'accuracy(unstructured)')
+        os.mkdir(os.path.join(save_path, 'accuracy(unstructured)'))
+
     except:
         pass
 
-    save_path_accuracy = save_path + 'accuracy(unstructured)/'
+    save_path_accuracy = os.path.join(save_path, 'accuracy(unstructured)/')
 
 
-    openaiapi_key = cfg['openai_api_key']
+    openaiapi_key = cfg['open_api_key']
     client = OpenAI(api_key=openaiapi_key) #나
     df = pd.read_csv(cfg['csv_path'])
 
@@ -76,7 +75,7 @@ def run_clinical():
         
         try:
             response = client.chat.completions.create(
-                model="gpt-4-turbo",
+                model="gpt-4o",
                 messages=[
                     {
                         "role": "system",
@@ -184,20 +183,20 @@ def run_clinical():
 def run_radiology():
     os.chdir(os.path.dirname(os.path.abspath(__file__)))
     
-    with open("config.yml", 'r') as ymlfile:
+    with open("config_all.yml", 'r') as ymlfile:
         cfg = yaml.load(ymlfile, Loader=yaml.FullLoader)
 
     save_path= cfg['save_path']
 
     try:
-        os.mkdir(save_path + 'accuracy(unstructured)')
+        os.mkdir(os.path.join(save_path, 'accuracy(unstructured)'))
     except:
         pass
 
-    save_path_accuracy = save_path + 'accuracy(unstructured)/'
+    save_path_accuracy = os.path.join(save_path, 'accuracy(unstructured)/')
     
 
-    openaiapi_key = cfg['openai_api_key']
+    openaiapi_key = cfg['open_api_key']
     client = OpenAI(api_key=openaiapi_key) #나
     df = pd.read_csv(cfg['csv_path'])
 
@@ -206,15 +205,7 @@ def run_radiology():
 
     system_content = """
     Task:
-    To systematically assess the "Impression" section of a CT report for critical errors that may have significant clinical implications.
-    
-    Procedure: 
-    - Begin by understanding the entire radiology report's context, purpose, and content. This will help you appreciate the clinical relevance of the findings and the intended message.
-    - Compare the "Findings" and "Impression" sections closely. Specifically, identify:
-    a. Omissions in the "Impression" section that concern critical, actionable abnormalities present in the "Findings".
-    b. Statements in the "Impression" section that directly contradict or misrepresent the information in the "Findings".
-    - Do not be overly critical about subtle differences in verbiage or style. The emphasis should be on identifying discrepancies that could potentially lead to significant clinical misunderstandings or incorrect management decisions.
-    - By narrowing down the focus on actionable abnormalities and direct contradictions, we hope to reduce false positives and concentrate on the most critical aspects of the report.
+    Assess the "Impression" section of a radiology report for critical errors that may have significant clinical implications.
     
     Output Format (JSON):
     {
@@ -222,6 +213,7 @@ def run_radiology():
         "error 1 reason": "{Specify the reason of error if applicable, or state 'N/A'}"
     }     
     """
+
 
     # Unified API calling function
     def api_call(row, value_col='Value', results=[]):
@@ -231,7 +223,7 @@ def run_radiology():
         
         try:
             response = client.chat.completions.create(
-                model="gpt-4-turbo",
+                model="gpt-4o",
                 messages=[
                     {
                         "role": "system",
@@ -335,7 +327,7 @@ def main():
 
     os.chdir(os.path.dirname(os.path.abspath(__file__)))
         
-    with open("config.yml", 'r') as ymlfile:
+    with open("config_all.yml", 'r') as ymlfile:
         cfg = yaml.load(ymlfile, Loader=yaml.FullLoader)
 
     save_path= cfg['save_path']
@@ -345,7 +337,7 @@ def main():
     except:
         pass
 
-    save_path_accuracy = save_path + 'accuracy(unstructured)/'
+    save_path_accuracy = os.path.join(save_path, 'accuracy(unstructured)/')
 
     #불러와서 합치기, 계산
     df1 = pd.read_csv(save_path_accuracy + 'accuracy(unstructured)_clinical.csv')
@@ -363,7 +355,7 @@ def main():
     result_df.to_csv(save_path_accuracy + 'visualization.csv', index=False)
 
     #계산 txt
-    mean_accuracy = result_df['accuracy_results'].mean().round(3)
+    mean_accuracy = (result_df['accuracy_results'].mean() * 100).round(3)
     std_accuracy = result_df['accuracy_results'].std().round(3)
     with open(save_path_accuracy + 'accuracy(unstructured)_mean.txt', 'w') as file:
         file.write(str(mean_accuracy))
@@ -390,7 +382,6 @@ def main():
     ).reset_index()
     summary_df['Accuracy_score_mean'] = (summary_df['Accuracy_score_mean'] * 100).round(3)
     summary_df['Accuracy_score_std'] = summary_df['Accuracy_score_std'].round(3)
-    summary_df = summary_df.rename(columns={'Mapping_info_1': 'Category'})
     summary_df = summary_df.rename(columns={'Accuracy_score_mean': 'Accuracy_score_mean (%)'})
     summary_df.to_csv(save_path_accuracy + 'accuracy(unstructured)_summary dataframe.csv', index=False)
 
