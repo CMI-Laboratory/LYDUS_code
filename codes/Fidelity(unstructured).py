@@ -12,20 +12,21 @@ import seaborn as sns
 def run():
     os.chdir(os.path.dirname(os.path.abspath(__file__)))
 
-    with open("config.yml", 'r') as ymlfile:
+    with open("config_all.yml", 'r') as ymlfile:
         cfg = yaml.load(ymlfile, Loader=yaml.FullLoader)
 
     save_path= cfg['save_path']
 
     try:
-        os.mkdir(save_path + 'fidelity(unstructured)')
+        #os.mkdir(save_path + 'fidelity(unstructured)')
+        os.mkdir(os.path.join(save_path, 'fidelity(unstructured)'))
     except:
         pass
 
-    save_path_fidelity = save_path + 'fidelity(unstructured)/'
+    #save_path_fidelity = save_path + 'fidelity(unstructured)/'
+    save_path_fidelity = os.path.join(save_path, 'fidelity(unstructured)/')
 
-
-    openaiapi_key = cfg['openai_api_key']
+    openaiapi_key = cfg['open_api_key']
     client = OpenAI(api_key=openaiapi_key) #나
     df = pd.read_csv(cfg['csv_path'])
 
@@ -96,7 +97,7 @@ def run():
         query = template + row['Value']
         try:
             messages = [{"role": "system", "content": system_prompt}, {"role": "user", "content": query}]
-            response = client.chat.completions.create(model="gpt-4-turbo", messages=messages, temperature=0)
+            response = client.chat.completions.create(model="gpt-4o", messages=messages, temperature=0)
             return response.choices[0].message.content
         except Exception as e:
             return None  # 재시도를 위해 None 반환
@@ -155,10 +156,10 @@ def run():
 
     
 
-    with open("config.yml", 'r') as ymlfile:
+    with open("config_all.yml", 'r') as ymlfile:
         cfg = yaml.load(ymlfile, Loader=yaml.FullLoader)
     
-    openaiapi_key = cfg['openai_api_key']
+    openaiapi_key = cfg['open_api_key']
     client = OpenAI(api_key=openaiapi_key) #나
     df = pd.read_csv(cfg['csv_path'])
     df = df[df['Mapping_info_1'] == 'note_rad']
@@ -177,11 +178,6 @@ def run():
 
     report_templates = {
         "CT abdomen": """
-        Contrast media:
-        Clinical information:
-        Comparison:
-
-        FINDINGS
         Liver :
         Gallbladder :
         Spleen :
@@ -195,39 +191,20 @@ def run():
         Bone windows :
         Vasculature :
         Soft Tissues :
-
-        IMPRESSION
         """,  
         "CT brain": """
-        Contrast media:
-        Clinical information:
-        Comparison:
-
-        FINDINGS
         Extra-axial spaces:
-        Intracranial hemorrhage:
         Ventricular system:
         Basal cisterns:
         Cerebral parenchyma:
-        Midline shift:
         Cerebellum:
         Brainstem:
-        Calvarium:
         Vascular system:
         Paranasal sinuses and mastoid air cells:
         Visualized orbits:
-        Visualized upper cervical spine:
-        Sella:
-        Skull base:
-
-        IMPRESSION
+        Bone:
         """,
         "CT chest": """
-        Contrast media:
-        Clinical information:
-        Comparison:
-
-        FINDINGS
         Pulmonary Parenchyma and Airways:
         Pleural Space:
         Heart and Pericardium:
@@ -236,77 +213,40 @@ def run():
         Osseous Structures and Chest Wall: 
         Upper Abdomen:
         Additional findings: 
-        
-        IMPRESSION
         """,
         "CT spine": """
-        Contrast media:
-        Clinical information:
-        Comparison:
-
-        FINDINGS
         Alignment :
         Bones :
         Intervertebral Discs :
         Spinal canal :
         Paraspinal soft tissues :
         Others :
-
-        IMPRESSION
         """,
         "X-ray chest": """
-        Clinical information:
-        Comparison:
-
-        FINDINGS
         Lungs :
         Heart :
         Mediastinum :
-
-        IMPRESSION
         """,
         "X-ray abdomen": """
-        Clinical information:
-        Comparison:
-
-        FINDINGS
         Bowel gas pattern :
         Abnormal calcifications :
         Bones :
         Others :
-
-        IMPRESSION
         """,
         "X-ray spine": """
-        Clinical information:
-        Comparison:
-
-        FINDINGS
         Alignment :
         Vertebral bodies :
         Intervertebral spaces :
         Soft Tissues :
         Others:
-
-        IMPRESSION
         """,
         "X-ray abdomen": """
-        Clinical information:
-        Comparison:
-
-        FINDINGS
         Bowel gas pattern :
         Abnormal calcifications :
         Bones :
         Others :
-
-        IMPRESSION
         """,
         "Echocardiography": """
-        Clinical information:
-        Comparison:
-
-        FINDINGS
         Left ventricle :
         Left atrium :
         Right atrium :
@@ -319,8 +259,6 @@ def run():
         Aorta :
         Pulmonary artery :
         Inferior vena cava and pulmonary veins :
-
-        IMPRESSION
     """
 
     }
@@ -330,8 +268,9 @@ def run():
     Output according to the report template.
     - If an item from the template exists in the report, label it only as 'mentioned'.
     - If it doesn't exist, label it only as 'not mentioned'.
-    - Never create anything outside of the items in the TEMPLATE."""
-
+    - Never create anything outside of the items in the TEMPLATE.
+    - Output format
+    (template의 항목): mentioned/not mentioned"""
 
     def process_row(row):
         template = report_templates.get(mapping.get(row['Mapping_info_2'], ""), "")
@@ -340,7 +279,7 @@ def run():
         query = template + row['Value']
         try:
             messages = [{"role": "system", "content": system_prompt}, {"role": "user", "content": query}]
-            response = client.chat.completions.create(model="gpt-4-turbo", messages=messages, temperature=0)
+            response = client.chat.completions.create(model="gpt-4o", messages=messages, temperature=0)
             return response.choices[0].message.content
         except Exception as e:
             return None  # 재시도를 위해 None 반환
@@ -366,29 +305,48 @@ def run():
         # Convert report_text to lowercase for case-insensitive comparison
         report_text_lower = report_text.lower()
 
-        # Determine the term used in the report, either "impression" or "conclusion"
-        if "impression" in report_text_lower:
-            split_term = "impression"
-        elif "conclusion" in report_text_lower:
-            split_term = "conclusion"
-        else:
-            # If neither term is found, return a default value
-            return 0
-
-        # Split the report text based on the identified term
-        findings_section, _ = report_text_lower.split(split_term, 1)
-
-        # Split "FINDINGS" section into items
-        findings_items = re.findall(r':\s*("[^"]+"|[^:\n]+)', findings_section)
+        # Split the report text into items using newline as separator
+        findings_items = report_text_lower.split('\n')
 
         # Calculate the total number of items
-        total_items = len(findings_items)
+        total_items = len([item for item in findings_items if item.strip() != ''])
 
         # Count the number of items marked as 'not mentioned'
         not_mentioned_items = sum('not mentioned' in item for item in findings_items)
 
         # Calculate and return the fidelity score
         return 1 - (not_mentioned_items / total_items) if total_items > 0 else 0
+
+        # # If report_text is None, return a default value (for example, 0)
+        # if report_text is None:
+        #     return 0
+
+        # # Convert report_text to lowercase for case-insensitive comparison
+        # report_text_lower = report_text.lower()
+
+        # # Determine the term used in the report, either "impression" or "conclusion"
+        # if "impression" in report_text_lower:
+        #     split_term = "impression"
+        # elif "conclusion" in report_text_lower:
+        #     split_term = "conclusion"
+        # else:
+        #     # If neither term is found, return a default value
+        #     return 0
+
+        # # Split the report text based on the identified term
+        # findings_section, _ = report_text_lower.split(split_term, 1)
+
+        # # Split "FINDINGS" section into items
+        # findings_items = re.findall(r':\s*("[^"]+"|[^:\n]+)', findings_section)
+
+        # # Calculate the total number of items
+        # total_items = len(findings_items)
+
+        # # Count the number of items marked as 'not mentioned'
+        # not_mentioned_items = sum('not mentioned' in item for item in findings_items)
+
+        # # Calculate and return the fidelity score
+        # return 1 - (not_mentioned_items / total_items) if total_items > 0 else 0
 
 
     # Filter out rows where 'fidelity_radiology' is 'Invalid mapping or template missing'
@@ -474,6 +432,7 @@ def run():
     filtered_data['Mapping_info_2'] = filtered_data['Mapping_info_2'].map(mapping_dict)
     plt.figure(figsize=(16, 12))
     sns.boxplot(x='Mapping_info_2', y='fidelity_results', data=filtered_data)
+    sns.stripplot(x='Mapping_info_2', y='fidelity_results', data=filtered_data, color='blue', jitter=True, alpha=0.5, size=12)
     plt.xlabel('Category', fontsize=12)
     plt.ylabel('Fidelity Results', fontsize=12)
     plt.xticks(rotation=30)  # Rotate category labels for better visibility
@@ -489,7 +448,7 @@ def run():
         Fidelity_score_std=lambda x: round(x.std(), 3)
     ).reset_index()
     summary_df['Mapping_info_2'] = summary_df['Mapping_info_2'].map(mapping_dict)
-    summary_df = summary_df.rename(columns={'Mapping_info_2': 'Category'})
+    #summary_df = summary_df.rename(columns={'Mapping_info_2': 'Category'})
     summary_df.to_csv(save_path_fidelity + 'fidelity(unstructured)_summary dataframe.csv', index=False)
 
     # 각 데이터프레임을 필터링하고 저장
@@ -499,5 +458,4 @@ def run():
         filename = f"fidelity(unstructured)_{values} dataframe.csv"
         filtered_df.to_csv(save_path_fidelity + filename, index=False)
     
-
 run()
