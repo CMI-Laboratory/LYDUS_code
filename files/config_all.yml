@@ -17,10 +17,10 @@ Accuracy_maximum_class_n: 10
 #범위 유효성(RangeValidity)
 Rangevalidity_boxplotnum: 10
 
-#단면적 일관성(Voca_consistency)
+#단면적 일관성(Cross-sectional consistency)
 Voca_consistency_show_details: True
 
-#시계열적 일관성(Time_consistency)
+#시계열적 일관성(Time series consistency)
 Time_consistency_mul: 2
 Time_consistency_min_percentile: 10
 Time_consistency_min_patient_count: 100
