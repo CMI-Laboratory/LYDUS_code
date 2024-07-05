@@ -140,16 +140,16 @@ validation_df = pd.DataFrame([
 ])
 
 
-# Apply a fallback mechanism for obviously incorrect GPT-4 validations
+# Apply a fallback mechanism for obviously incorrect GPT-4 validations and handle None
 def fallback_validation(row):
     code = row['Code']
-    if not re.match(r'^[A-Za-z0-9\.\-]*$',
-                    code):  # Basic validation for alphanumeric codes with optional periods and hyphens
+    if not re.match(r'^[A-Za-z0-9\.\-]*$', code):  # Basic validation for alphanumeric codes with optional periods and hyphens
         return False
-    return row['Valid']
+    return row['Valid'] if row['Valid'] is not None else False
 
-
-validation_df['Valid'] = validation_df.apply(fallback_validation, axis=1)
+# Fill None with False explicitly before applying ~
+validation_df['Valid'] = validation_df['Valid'].fillna(False)
+error_details = validation_df[~validation_df['Valid']]
 
 # Calculate the total number of codes and valid codes
 total_codes = len(validation_df)
