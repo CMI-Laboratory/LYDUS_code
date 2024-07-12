@@ -139,7 +139,6 @@ validation_df = pd.DataFrame([
     for result in results
 ])
 
-
 # Apply a fallback mechanism for obviously incorrect GPT-4 validations and handle None
 def fallback_validation(row):
     code = row['Code']
@@ -149,6 +148,8 @@ def fallback_validation(row):
 
 # Fill None with False explicitly before applying ~
 validation_df['Valid'] = validation_df['Valid'].fillna(False)
+
+# Save errors details to total_table.csv
 error_details = validation_df[~validation_df['Valid']]
 
 # Calculate the total number of codes and valid codes
@@ -167,9 +168,6 @@ with open(os.path.join(format_validity_folder, "total_results.txt"), 'w') as f:
     f.write(f"Invalid Code: {invalid_count}\n")
 
 # Save errors details to total_table.csv
-error_details = validation_df[~validation_df['Valid']]
-
-# Calculate the total number of codes, invalid codes, and format validity for each variable
 error_summary = validation_df.groupby('Variable').agg(
     Total_Code=('Code', 'count'),
     Invalid_Code=('Valid', lambda x: (~x).sum())
