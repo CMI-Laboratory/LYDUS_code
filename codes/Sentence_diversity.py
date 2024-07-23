@@ -51,7 +51,6 @@ if not os.path.exists(results_folder):
     
     
 top_n = config_data.get('Text_diversity_top_n', 10)
-target_sentence = config_data.get('target_sentence', None)
 
 
 def custom_sent_tokenize(text):
@@ -107,19 +106,25 @@ def percentage_top_items(total_count, total_counter, percentage):
     top_items_sum = sum(count for _, count in sorted_items[:top_items_count])
     return (top_items_sum / total_count) * 100
 
+#0723
+def calculate_and_save_sentence_frequencies(sentences, results_folder):
+    # 문장의 빈도 계산
+    sentence_counter = Counter(sentences)
+    total_sentences = sum(sentence_counter.values())
 
+    # DataFrame 생성
+    freq_df = pd.DataFrame(sentence_counter.items(), columns=['Sentence', 'Count'])
+    freq_df['Percentage'] = (freq_df['Count'] / total_sentences) * 100
+
+    # DataFrame을 CSV 파일로 저장
+    csv_filename = os.path.join(results_folder, 'sentence_frequencies.csv')
+    freq_df.to_csv(csv_filename, index=False)
+    print(f"Sentence frequencies saved to CSV file at {csv_filename}")
+    return freq_df
         
-def calculate_sentence_percentage(total_counter, total_count, sentence):
-    if sentence not in total_counter:
-        print(f"The word '{sentence}' is not present in the text.")
-        return None
-    sentence_count = total_counter[sentence]
-    sentence_percentage = (sentence_count / total_count) * 100 if total_count > 0 else 0
-    return sentence_percentage        
-        
-        
+#0723 함수 일부 수정        
 # 주 함수
-def calculate_sentence_diversity(csv_file, top_n=10, target_sentence = None):
+def calculate_sentence_diversity(csv_file, top_n=10):
     try:
         df = pd.read_csv(csv_file, low_memory=False)
         if 'Mapping_info_1' not in df or 'Value' not in df:
@@ -144,6 +149,9 @@ def calculate_sentence_diversity(csv_file, top_n=10, target_sentence = None):
             output_file.write("No sentences with verbs were found.\n")
             return
         
+        #0723
+        freq_df = calculate_and_save_sentence_frequencies(total_sentences, results_folder)
+        
         unique_sentence_count = len(set(total_sentences))
         total_count = len(total_sentences)
         sen_diversity = (unique_sentence_count / total_count) * 100
@@ -151,14 +159,6 @@ def calculate_sentence_diversity(csv_file, top_n=10, target_sentence = None):
         output_file.write(diversity_info)
         print(diversity_info)
         
-        if target_sentence:
-            sentence_percentage = calculate_sentence_percentage(Counter(total_sentences), total_count, target_sentence)
-            if sentence_percentage is not None:
-                target_info = f"The sentence '{target_sentence}' accounts for {sentence_percentage:.2f}% of the total sentences.\n"
-                output_file.write(target_info)
-                print(target_info)
-            else:
-                return
         
         show_detail(total_sentences, Counter(total_sentences), total_count, top_n, output_file)
     
@@ -182,5 +182,4 @@ def show_detail(total_sentences, total_counter, total_count, top_n, output_file)
         output_file.write(detail)
         print(detail)        
         
-calculate_sentence_diversity(csv_path, top_n, target_sentence)
-
+calculate_sentence_diversity(csv_path, top_n)
