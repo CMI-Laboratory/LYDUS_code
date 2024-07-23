@@ -106,11 +106,12 @@ def calculate_diversity(class_values):
     probabilities = [count / total_num for _, count in class_counter]
     shannon_diversity = -sum(prob * log(prob) for prob in probabilities)
     simpson_diversity = sum(prob**2 for prob in probabilities)
-    class_diversity = (class_num / total_num)
+
     
-    simpson_diversity_score = 1 - simpson_diversity
-    
-    return class_diversity, shannon_diversity,simpson_diversity_score*100, class_counter, class_num, total_num
+    #0723 업데이트 (return도 수정하였으니 확인 부탁드립니다)
+    class_diversity = (class_num / total_num) *100
+    simpson_diversity_score = 100 if class_diversity == 100 else (1 - simpson_diversity) * 100
+    return class_diversity, shannon_diversity,simpson_diversity_score, class_counter, class_num, total_num
 
 def plot_class_counts(class_counts, title):
     labels, counts = zip(*class_counts)
