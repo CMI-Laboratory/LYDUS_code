@@ -158,6 +158,13 @@ except:
 summary_df.to_csv('LYDUS_results/'+str(session_id)+'/'+'rangevalidity'+'/'+'summary_df.csv',index=False, encoding='cp949')
 total_outlier_df.to_csv('LYDUS_results/'+str(session_id)+'/'+'rangevalidity'+'/'+'total_outlier_df.csv',index=False,encoding='cp949')
 
+rangevalidity_list=list(summary_df['outlier_total_proportion']) #20240723
+rangevalidity_list=[1-x for x in rangevalidity_list] #20240723
+cleaned_list = [x for x in rangevalidity_list if not np.isnan(x)] #20240723
+plt.boxplot( cleaned_list ) #20240723
+plt.savefig('LYDUS_results/'+str(session_id)+'/'+'rangevalidity'+'/'+'total_result_boxplot.png') #20240723
+
+
 totalcount=0
 frac_total=0
 for i in range(len(summary_df)):
