@@ -185,6 +185,28 @@ def calculate_accuracy(csv, n):
     results_df = pd.DataFrame(results, columns=['Variable_name', 'Accuracy', 'Precision', 'Recall', 'F1Score', 'AUROC'])
     results_df.to_csv(os.path.join(results_folder, 'accuracy_and_metrics.csv'), index=False)
 
+    #0723 boxplot
+    accuracy = (results_df['Accuracy'] * 100).tolist()
+    precision = (results_df['Precision'] * 100).tolist()
+    recall = (results_df['Recall'] * 100).tolist()
+    f1score = (results_df['F1Score'] * 100).tolist()
+    auroc = (results_df['AUROC'] * 100).tolist()
+
+    # 박스플롯 생성
+    data = [accuracy, precision, recall, f1score, auroc]
+    fig, ax = plt.subplots()
+    ax.boxplot(data, vert = False)
+
+    # 축 레이블 설정
+    ax.set_yticklabels(['Accuracy', 'Precision', 'Recall', 'F1 Score', 'AUROC'])
+    ax.set_xlabel('Scores')
+    ax.set_title('Weighted Metrics Boxplot')
+    
+    ax.set_xlim(0,100)
+    
+    plt.savefig(os.path.join(results_folder, 'total_charts.png'), format='png', dpi=300)
+    
+    plt.show()
 
     
     
