@@ -127,16 +127,24 @@ def show_detail(total_sentences, total_counter, total_count, top_n, output_file)
         print(f"Top {percentage}% of items account for {score:.2f}% of the total.")
 
 # 특정 단어의 비율 계산
-def calculate_word_percentage(total_counter, total_count, word):
-    if word not in total_counter:
-        print(f"The word '{target_word}' is not present in the text.")
-        return None
-    word_count = total_counter[word]
-    word_percentage = (word_count / total_count) * 100 if total_count > 0 else 0
-    return word_percentage
+#0723
+def calculate_and_save_word_frequencies(words, results_folder):
+    # 모든 단어의 빈도 계산
+    word_counter = Counter(words)
+    total_words = sum(word_counter.values())
+    
+    # DataFrame 생성
+    freq_df = pd.DataFrame(word_counter.items(), columns=['Word', 'Count'])
+    freq_df['Percentage'] = (freq_df['Count'] / total_words) * 100
+    
+    # DataFrame을 CSV 파일로 저장
+    freq_df.to_csv(os.path.join(results_folder, 'word_frequencies.csv'), index=False)
+    print("Word frequencies saved to CSV file.")
+    return freq_df
         
 # 주 함수
-def calculate_word_diversity(csv_file, top_n, target_word=None):
+# 0723 함수 전체적으로 수정
+def calculate_word_diversity(csv_file, top_n):
     df = pd.read_csv(csv_file, low_memory=False)
     if df.empty:
         print("The dataframe is empty.")
@@ -156,6 +164,11 @@ def calculate_word_diversity(csv_file, top_n, target_word=None):
             output_file.write("No words extracted from notes.\n")
             return
         
+        
+        #0723
+        # 모든 단어의 빈도와 백분율 계산 및 저장
+        freq_df = calculate_and_save_word_frequencies(total_words, results_folder)
+        
         total_counter = Counter(total_words)
         total_count = len(total_words)
         unique_word_count = len(set(total_words))
@@ -163,19 +176,9 @@ def calculate_word_diversity(csv_file, top_n, target_word=None):
         output_file.write(f"Word Diversity: {word_diversity:.2f}%\n")
         print(f"Word Diversity: {word_diversity:.2f}%\n")
         
-        if target_word:
-            target_word_percentage = calculate_word_percentage(total_counter, total_count, target_word)
-            if target_word_percentage is not None:
-                output_file.write(f"The word '{target_word}' accounts for {target_word_percentage:.2f}% of the total words.\n")
-                print(f"The word '{target_word}' accounts for {target_word_percentage:.2f}% of the total words.\n")
-            else:
-                output_file.write(f"The word '{target_word}' is not present in the text.\n")
-                print(f"The word '{target_word}' is not present in the text.\n")
         
         show_detail(total_words, total_counter, total_count, top_n, output_file)
   
     
- 
-        
-calculate_word_diversity(csv_path, top_n, target_word=None)
-
+#0723 
+calculate_word_diversity(csv_path, top_n)
