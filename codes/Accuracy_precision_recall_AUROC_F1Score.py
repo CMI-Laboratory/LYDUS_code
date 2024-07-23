@@ -207,7 +207,6 @@ def calculate_accuracy(csv, n):
     plt.savefig(os.path.join(results_folder, 'total_charts.png'), format='png', dpi=300)
     
     plt.show()
-
     
     
 
