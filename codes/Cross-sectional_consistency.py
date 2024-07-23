@@ -232,6 +232,8 @@ def calculate_consistency(csv_file_name, save_output, show_details):
     total_consistency = 0
     count_vars = 0
     consistency_results = []
+    #0723
+    consistency_values = []
 
     output_file_path = 'Cross_sectional_consistency_details.txt' if save_output else None
     output_file = None
@@ -301,6 +303,16 @@ def calculate_consistency(csv_file_name, save_output, show_details):
     finally:
         if output_file:
             output_file.close()
+
+    # 0723 박스플롯 생성
+    fig, ax = plt.subplots()
+    ax.boxplot(consistency_values, vert=False)
+    ax.set_title("Cross-sectional Consistency")
+    ax.set_xlabel("Consistency Value (%)")
+    ax.set_yticklabels(['Consistency'])
+    plt.savefig(os.path.join(results_folder, 'consistency_boxplot.png'))  # 박스플롯 저장
+    plt.show()
+
             
 calculate_consistency(csv_path, save_output, show_details)          
 
