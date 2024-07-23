@@ -67,7 +67,8 @@ def calculation(instance_values):
     return instance_diversity, shannon_diversity, simpson_diversity_score, instance_counter
     
 
-def calculate_class_instance_counts(class_values, instance_values):
+#0723 함수 코드 전체적으로 수정
+def calculate_class_instance_counts(class_values, instance_values, results_folder):
     df = pd.DataFrame({"Class": class_values, "Instance": instance_values})
     class_instance_counts = df.groupby("Class")["Instance"].agg(['size', 'nunique']).reset_index()
     class_instance_counts.rename(columns={'size': 'Total number of Data', 'nunique': 'Number of Instances'}, inplace=True)
@@ -75,10 +76,11 @@ def calculate_class_instance_counts(class_values, instance_values):
     class_instance_counts = df.groupby(["Class", "Instance"]).size().reset_index(name="Instance_Count")
     class_counts = df.groupby("Class").size().reset_index(name="Total_Count")
     '''
-    
-    
+     
     weighted_instance_diversities = []
     weighted_simpson_diversities = []
+    instance_diversities = []
+    simpson_diversities = []
     total_items = len(class_values)
 
     def print_detail(class_value,instance_diversity,simpson_diversity_score, shannon_diversity):
@@ -106,12 +108,17 @@ def calculate_class_instance_counts(class_values, instance_values):
             'Instance_Simpson_Diversity_Score': f"{simpson_diversity_score:.2f}%"
         })
         
-        
+        instance_diversities.append(instance_diversity)
+        simpson_diversities.append(simpson_diversity_score)
         weighted_instance_diversities.append(instance_diversity * total_count)
         weighted_simpson_diversities.append(simpson_diversity_score * total_count)
         
         # 클래스별 세부 지표      
         print_detail(class_value,instance_diversity,simpson_diversity_score, shannon_diversity)
+    
+    #0723
+    plot_boxplot(instance_diversities, 'Instance Diversity Distribution', 'Diversity (%)', results_folder, 'instance_diversity_boxplot.png')
+    plot_boxplot(simpson_diversities, 'Simpson Diversity Score Distribution', 'Diversity Score (%)', results_folder, 'simpson_diversity_score_boxplot.png')
     
     weighted_avg_instance_diversity = sum(weighted_instance_diversities) / total_items
     weighted_avg_simpson_diversity = sum(weighted_simpson_diversities) / total_items
@@ -129,6 +136,20 @@ def calculate_class_instance_counts(class_values, instance_values):
     
     print(f"Weighted Average Instance Diversity: {weighted_avg_instance_diversity:.2f}%")
     print(f"Weighted Average Simpson Diversity: {weighted_avg_simpson_diversity:.2f}%\n")
+
+    
+#0723 
+def plot_boxplot(data, title, ylabel, results_folder, filename):
+    plt.figure(figsize=(10, 6))
+    plt.boxplot(data, vert=False)
+    plt.title(title)
+    plt.xlabel(ylabel)
+    plt.yticks([])  # Y축 레이블 제거
+    filepath = os.path.join(results_folder, filename)
+    plt.savefig(filepath)
+    plt.close()
+    print(f"Boxplot saved successfully at {filepath}")
+    
     
 def calculate_instance_diversity(csv):
     df = pd.read_csv(csv)
@@ -139,7 +160,7 @@ def calculate_instance_diversity(csv):
     
     class_values = df_target['Variable_name']
     instance_values = df_target['Patient_number']
-    calculate_class_instance_counts(class_values, instance_values)
+    #0723
+    calculate_class_instance_counts(class_values, instance_values, results_folder)
     
 calculate_instance_diversity(csv_path)
-
