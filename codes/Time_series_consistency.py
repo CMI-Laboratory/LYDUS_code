@@ -191,7 +191,9 @@ def detect_change_points_v3(data, variable_name, years, p=1, d=1, q=0, mul=2, mi
         # 그래프 표시 및 파일로 저장
         plt.tight_layout()
         plt.savefig(os.path.join(results_folder, f"{variable_name}_time_consistency.png"))
-        #plt.show()
+        #plt.show
+        #0723
+        plt.close(fig)
     
 
     
