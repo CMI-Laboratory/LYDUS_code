@@ -155,6 +155,24 @@ def calculate_and_plot_diversity(df, column_name):
 
     return diversity_results
 
+    
+#0723
+def plot_diversity_boxplot(diversity_scores, title, results_folder):
+    # 박스플롯 생성
+    plt.figure(figsize=(8, 6))
+    plt.boxplot(diversity_scores, vert=False)
+    plt.title(title)
+    plt.xlabel('Simpson Diversity Score')
+    plt.yticks([])  # Y축 레이블 제거
+
+    # 박스플롯 저장
+    file_path = os.path.join(results_folder, 'simpson_class_diversity_boxplot.png')
+    plt.savefig(file_path, format='png', dpi=300)
+    plt.show()
+    plt.close()  # 생성된 그림을 닫음
+    print(f"Boxplot saved successfully at {file_path}")    
+
+
 def calculate_weighted_average_simpson_from_list(diversity_results):
     total_weighted_simpson = 0
     total_count = 0
@@ -182,7 +200,12 @@ def save_diversity_results_to_csv(diversity_results, csv_file_path):
     results_df.to_csv(os.path.join(results_folder, csv_file_path), index=False)
     print(f"Diversity results saved to {csv_file_path}")
 
-
+#0723
+def collect_simpson_diversity_scores(diversity_results):
+    # Simpson Diversity 값 수집
+    simpson_scores = [float(result['Class_Simpson_diversity']) for result in diversity_results]
+    return simpson_scores
+    
 def calculate_class_diversity_from_csv(csv_path):
     df = pd.read_csv(csv_path)
     target_column_df, final_df_categorical = extract_class_data_using_mapping(df)
@@ -193,12 +216,17 @@ def calculate_class_diversity_from_csv(csv_path):
 
     #가중 평균 다양성
     combined_diversity_results = diversity_by_mapping_info + diversity_by_variable_name
-    
     save_diversity_results_to_csv(combined_diversity_results, 'Class_diversity_results.csv')
     
+    # 0723
+    simpson_scores = collect_simpson_diversity_scores(combined_diversity_results)
+    plot_diversity_boxplot(simpson_scores, "Simpson Diversity Boxplot", results_folder)
+    
+    
+    #가중 평균 simpson 다양성 출력
     weighted_average_simpson = calculate_weighted_average_simpson_from_list(combined_diversity_results)
-
-    print(f"Weighted average Simpson diversity: {weighted_average_simpson:.2f}%")
+    #0723
+    print(f"Weighted average Simpson Class diversity: {weighted_average_simpson:.2f}%")
 
 
 calculate_class_diversity_from_csv(csv_path)
