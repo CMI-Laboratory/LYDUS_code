@@ -140,6 +140,9 @@ elif operation_type=='manual':
 else:
     print('operation type is wrong')
 
+
+individual_results_df=pd.DataFrame(columns=['Variable Name','Reliability','Lower Anomaly','Upper Anomaly']) ##20240723
+
 totalcount=0
 totalfrac=0
 for iterr in range(iterations):
@@ -576,13 +579,19 @@ for iterr in range(iterations):
     
     totalcount += len(totaldf)
     totalfrac +=  ( ( len(totaldf) - len(totaldf_upper) - len(totaldf_under) )/len(totaldf) ) * len(totaldf)
+    
+    individual_results_list=[  target_variable , round(( ( len(totaldf) - len(totaldf_upper) - len(totaldf_under) )/len(totaldf) ),4), round(( ( len(totaldf_under) )/len(totaldf) ),4), round(( ( len(totaldf_upper) )/len(totaldf) ),4)  ] #20240723
+    individual_results_df.loc[len(individual_results_df)]=individual_results_list #20240723
                   
 totalresult=round(totalfrac/totalcount,4)
 text1='total_result='+str(totalresult)
 file=open(filepathsave2+'total_result.txt',"w")
 file.write(text1)
 file.close()        
-    
+
+individual_results_df.to_csv(filepathsave2+'individual_results.csv',index=False) #20240723
+plt.boxplot( individual_results_df['Reliability']) #20240723
+plt.savefig(filepathsave2+'total_boxplot.png') #20240723
     
 now_temp2= datetime.datetime.now()
 print(now_temp2-now_temp1)
