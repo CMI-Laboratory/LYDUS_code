@@ -185,5 +185,10 @@ file=open( savepath1+'totalgranularity.txt' ,"w")
 file.write(text1)
 file.close()
 
+granularity_list=list(totaltable['Granularity']) #20240723
+cleaned_list = [x for x in granularity_list if not np.isnan(x)] #20240723
+plt.boxplot( cleaned_list ) #20240723
+plt.savefig(savepath1+'total_boxplot.png') #20240723
+
 now2=datetime.datetime.now()
 print(now2-now1)
