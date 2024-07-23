@@ -201,11 +201,11 @@ def validate_dates(csv_file_name, save_path):
     total_dates_num = len(final_date_df)
     invalid_dates_num = len(invalid_indexes)
     valid_dates_num = total_dates_num - invalid_dates_num
-    #print(total_dates_num, invalid_dates_num, valid_dates_num )
+    print(total_dates_num, invalid_dates_num, valid_dates_num )
     
     # 파이 차트 데이터 준비
     labels = ['Valid Dates', 'Invalid Dates']
-    sizes = [valid_dates_num, invlaid_dates_num]
+    sizes = [valid_dates_num, invalid_dates_num]
     colors = ['green', 'red']
     explode = (0.1, 0)  # 유효한 날짜 부분을 강조
 
@@ -217,8 +217,13 @@ def validate_dates(csv_file_name, save_path):
     # 차트 타이틀 설정
     plt.title('Percentage of Valid and Invalid Dates in Dataset')
 
-    # 차트 보여주기
-    plt.show()
+    # 차트 저장
+    # plt.show()
+    output_folder = os.path.join(save_path, 'Date_validation')
+    output_path = os.path.join(output_folder, 'Total_date_validity_chart.png')
+    plt.savefig(output_path, format='png', dpi = 300)
+    plt.close()
+    
 
     
     
