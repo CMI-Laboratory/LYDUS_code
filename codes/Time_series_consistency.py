@@ -213,6 +213,25 @@ def save_summary_to_text(content, text_file_path):
     with open(os.path.join(results_folder, text_file_path), 'w') as file:
         file.write(content)
 
+#0723
+def plot_time_consistency_pie_chart(consistency_percentage, results_folder):
+    # 파이 차트 데이터 준비
+    labels = ['Change Points Detected', 'Consistent Time Series']
+    sizes = [100 - consistency_percentage, consistency_percentage]
+    colors = ['red', 'green']
+    explode = (0.1, 0)  # 첫 번째 조각 분리
+
+    # 파이 차트 생성
+    fig, ax = plt.subplots()
+    ax.pie(sizes, explode=explode, labels=labels, colors=colors, autopct='%1.2f%%', shadow=True, startangle=90)
+    ax.axis('equal')  # 동그란 모양 유지
+
+    # 파이 차트 저장
+    plt.title('Time Series Consistency Analysis')
+    pie_chart_path = os.path.join(results_folder, 'time_consistency_pie_chart.png')
+    plt.savefig(pie_chart_path, format='png', dpi=300)  # 고해상도로 저장
+    plt.close()  # 차트 닫기
+
 
 def calculate_time_consistency(csv, p=1, d=1, q=0, mul=2, min_percentile=10, min_patient = 100):
     df=pd.read_csv(csv)
@@ -245,6 +264,9 @@ def calculate_time_consistency(csv, p=1, d=1, q=0, mul=2, min_percentile=10, min
     )
     print(summary)
     save_summary_to_text(summary, 'Time_consistency_total_results.txt')
+    #0723
+    # 파이 차트 생성 및 저장
+    plot_time_consistency_pie_chart(time_series_consistency, results_folder)
     
     
 calculate_time_consistency(csv_path, mul = mul, min_percentile = min_percentile, min_patient= min_patient_count)
