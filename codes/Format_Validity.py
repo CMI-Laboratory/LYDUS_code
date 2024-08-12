@@ -2,16 +2,14 @@ import sys
 import yaml
 import pandas as pd
 import re
-from collections import defaultdict, Counter
+from collections import defaultdict
 import openai
 import os
 import matplotlib.pyplot as plt
 
-
 def read_yaml(path):
     with open(path, 'r', encoding='utf-8') as file:
         return yaml.safe_load(file)
-
 
 # Check for the command-line argument
 if len(sys.argv) < 2:
@@ -27,6 +25,8 @@ openai_api_key = config.get('open_api_key')
 if not openai_api_key:
     print("OpenAI API key not found in the configuration file.")
     sys.exit(1)
+
+# Set the OpenAI API key
 openai.api_key = openai_api_key
 
 # Retrieve the path to the QUIQ CSV file
@@ -76,6 +76,13 @@ unique_matched_columns_df = matched_columns_df.drop_duplicates(subset=['Variable
 # Initialize a dictionary for storing validation results
 validation_results = defaultdict(list)
 
+# Cache for storing previously validated codes and formats
+validated_cache = {}
+format_cache = {}
+
+# Function to identify the format pattern of a code
+def get_code_format(code):
+    return ''.join(['9' if c.isdigit() else 'A' if c.isalpha() else c for c in code])
 
 # Function to ask GPT-4 for validation
 def validate_code_with_gpt4(variable_name, description, code):
@@ -88,18 +95,11 @@ def validate_code_with_gpt4(variable_name, description, code):
     """
     try:
         response = openai.ChatCompletion.create(
-            model="gpt-4",
+            model="gpt-4o-mini",
             messages=[
                 {"role": "system", "content": system_prompt},
-                {"role": "user",
-                 "content": "Please validate the code based on the provided description using your knowledge base."}
-            ],
-            temperature=0,
-            max_tokens=50,
-            top_p=1.0,
-            n=1,
-            frequency_penalty=0,
-            presence_penalty=0
+                {"role": "user", "content": "Please validate the code based on the provided description using your knowledge base."}
+            ]
         )
         text = response.choices[0]['message']['content'].strip()
         gpt_output_file.write(f"GPT-4 response for {variable_name} ({code}): {text}\n")
@@ -108,26 +108,43 @@ def validate_code_with_gpt4(variable_name, description, code):
         gpt_output_file.write(f"Error validating {variable_name} ({code}): {e}\n")
         return None
 
+# Perform validations with format caching
+for variable_name in unique_variable_names:
+    # Filter rows specific to the current variable
+    variable_df = filtered_quiq_df[filtered_quiq_df['Variable_name'] == variable_name]
 
-# Perform multiple validations
-NUM_VALIDATIONS = 5  # Number of iterations to validate each code
+    # Get description for the current variable
+    description = unique_matched_columns_df.loc[unique_matched_columns_df['Variable_name'] == variable_name, 'Description'].values[0]
 
-for _, row in filtered_quiq_df.iterrows():
-    variable_name = row['Variable_name']
-    code = row['Value']
-    description = matched_columns_df.loc[matched_columns_df['Variable_name'] == variable_name, 'Description'].values[0]
+    for _, row in variable_df.iterrows():
+        code = row['Value']
+        code_format = get_code_format(code)
 
-    valid_counts = Counter()
-    for _ in range(NUM_VALIDATIONS):
+        # Check if the format has already been validated
+        if code_format in format_cache:
+            validation_results[variable_name].append({
+                "Code": code,
+                "Valid": format_cache[code_format]
+            })
+            validated_cache[code] = format_cache[code_format]
+            continue
+
+        # Check if the exact code has already been validated
+        if code in validated_cache:
+            validation_results[variable_name].append({
+                "Code": code,
+                "Valid": validated_cache[code]
+            })
+            continue
+
+        # Validate using GPT-4 if not already validated
         is_valid = validate_code_with_gpt4(variable_name, description, code)
-        valid_counts[is_valid] += 1
-
-    # Determine the most frequent result
-    most_frequent_valid = valid_counts.most_common(1)[0][0]
-    validation_results[variable_name].append({
-        "Code": code,
-        "Valid": most_frequent_valid
-    })
+        validation_results[variable_name].append({
+            "Code": code,
+            "Valid": is_valid
+        })
+        validated_cache[code] = is_valid
+        format_cache[code_format] = is_valid
 
 # Close the GPT-4 output file
 gpt_output_file.close()
@@ -172,8 +189,7 @@ error_summary = validation_df.groupby('Variable').agg(
     Total_Code=('Code', 'count'),
     Invalid_Code=('Valid', lambda x: (~x).sum())
 ).reset_index()
-error_summary['Format Validity (%)'] = ((error_summary['Total_Code'] - error_summary['Invalid_Code']) / error_summary[
-    'Total_Code']) * 100
+error_summary['Format Validity (%)'] = ((error_summary['Total_Code'] - error_summary['Invalid_Code']) / error_summary['Total_Code']) * 100
 error_summary['Format Validity (%)'] = error_summary['Format Validity (%)'].round(2)  # Round to two decimal places
 
 # Save the summary to total_table.csv
@@ -202,7 +218,7 @@ for variable_name in error_details['Variable'].unique():
     variable_valid_count = variable_df['Valid'].sum()
     variable_invalid_count = variable_total_codes - variable_valid_count
     variable_validity_percentage = (
-                                               variable_valid_count / variable_total_codes) * 100 if variable_total_codes > 0 else 0
+        variable_valid_count / variable_total_codes) * 100 if variable_total_codes > 0 else 0
 
     # Save relevant results to [Variable_name]_results.txt
     with open(os.path.join(variable_folder, f"{variable_name}_results.txt"), 'w') as f:
