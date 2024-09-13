@@ -109,7 +109,7 @@ def validate_records_long_format(dataset, timepoint_pairs):
                     start_time = row['Value']
                     end_time = end_row.iloc[0]['Value']
                     if pd.to_datetime(start_time) >= pd.to_datetime(end_time):
-                        errors_count += 2
+                        errors_count += 1
                         errors_details.append((row['Admission_number'], start_col, start_time, end_col, end_time))
 
     valid_records_count = total_records - errors_count
