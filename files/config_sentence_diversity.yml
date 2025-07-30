@@ -1,5 +1,3 @@
-#Config
-csv_path: "C:\\Users\\Lydus\\QUIQ_table.csv"
-
-#Sentence_diversity
+quiq_path: /path/to/your/quiq.csv
+save_path: /path/to/save/results
 top_n: 10
