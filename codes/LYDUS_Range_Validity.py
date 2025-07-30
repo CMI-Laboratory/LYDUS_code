@@ -30,12 +30,6 @@ def draw_box_plot(save_path, order, label_vs_boxplot, box_plot_num):
 
     plt.savefig(save_path + '/range_validity_boxplot.png', facecolor = 'white')
 
-'''def draw_range_validity_box_plot(ax:Axes, summary_df:pd.DataFrame):
-    rangevalidity_list = list(summary_df['outlier_total_proportion'])
-    rangevalidity_list = [1-x for x in rangevalidity_list]
-    cleaned_list = [x*100 for x in rangevalidity_list if not np.isnan(x)]
-    ax.clear()
-    ax.boxplot(cleaned_list)'''
 
 def _get_outlier(df=None, column=None, weight=1.5):
     quantile_25 = np.percentile(df[column].values, 25)
