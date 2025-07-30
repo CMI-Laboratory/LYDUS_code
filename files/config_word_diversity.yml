@@ -1,7 +1,0 @@
-#Config
-
-open_api_key: "sk-0000"
-csv_path: "C:\\Users\\Lydus\\QUIQ_table.csv"
-
-#Word_diversity
-top_n: 10
