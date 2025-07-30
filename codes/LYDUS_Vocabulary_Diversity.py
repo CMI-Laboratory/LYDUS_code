@@ -10,7 +10,7 @@ from nltk.tag import pos_tag
 import matplotlib.pyplot as plt
 from matplotlib.axes import Axes
 
-def draw_word_diversity_histogram(ax: Axes, item_vs_percentage: dict, n: int):
+def draw_vocab_diversity_histogram(ax: Axes, item_vs_percentage: dict, n: int):
     ax.clear()
     top_n_items = []
     top_n_percentages = []
@@ -119,7 +119,7 @@ if __name__ == '__main__':
             f.write(f"  Top {k}%: {v}\n")
             
     fig, ax = plt.subplots(figsize=(8, 5))
-    draw_word_diversity_histogram(ax, item_vs_percentage, n=top_n)
+    draw_vocab_diversity_histogram(ax, item_vs_percentage, n=top_n)
     fig.tight_layout()
     fig.savefig(f"{save_path}/vocabulary_diversity_plot.png")
 
