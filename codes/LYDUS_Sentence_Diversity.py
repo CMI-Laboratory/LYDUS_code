@@ -55,7 +55,7 @@ def _counter_topn_items(total_count, total_counter, top_n=10):
 def _percentage_top_items(total_count, total_counter, percentage):
     if total_count == 0:
         return 0
-    top_items_count = int(total_count * percentage / 100)
+    top_items_count = int(len(total_counter) * percentage / 100)
     sorted_items = total_counter.most_common()
     top_items_sum = sum(count for _, count in sorted_items[:top_items_count])
     return round(top_items_sum/total_count * 100, 2)
