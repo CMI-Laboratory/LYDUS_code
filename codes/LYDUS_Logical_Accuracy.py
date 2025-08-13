@@ -83,7 +83,7 @@ def llm_ask_recommend(client, model_ver, var_name_target, n, var_list_candidate)
     
     Important Rules :
     1. Do **not include** the target variable itself in the output.
-    2. Return exactly {n} variable names, seperate them by **commas**.
+    2. Return exactly {n} variable names, seperate them by **!**.
     3. Do **not repeat** any variable name - all must be unique.
     4. Return the variable names **exactly as it appears** in the provided list.
     5. Do **not include** any additional explanation.
@@ -101,7 +101,7 @@ def llm_ask_recommend(client, model_ver, var_name_target, n, var_list_candidate)
     
     var_list_recommended_text = response.choices[0].message.content
     var_list_recommended_text = var_list_recommended_text.replace("'", '')
-    var_list_recommended = var_list_recommended_text.split(', ')
+    var_list_recommended = var_list_recommended_text.split('!')
     print(f'RECOMMENDED VARIABLES : {var_list_recommended}')
     return var_list_recommended
     
@@ -671,5 +671,6 @@ if __name__ == '__main__' :
         file.write(f'Outlier Num = {outlier_num}\n')
 
     print('<SUCCESS>')
+
 
 
