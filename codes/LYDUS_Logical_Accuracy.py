@@ -359,7 +359,7 @@ def get_logical_accuracy(quiq:pd.DataFrame,
                 df_merged = df_merged.drop(['Event_date', 'Time_diff'], axis = 1)
 
             else :
-                assert True, 'FAIL - Variable name mismatch detected.' 
+                assert False, 'FAIL - Variable name mismatch detected.' 
 
             gc.collect()
 
@@ -671,4 +671,5 @@ if __name__ == '__main__' :
         file.write(f'Outlier Num = {outlier_num}\n')
 
     print('<SUCCESS>')
+
 
