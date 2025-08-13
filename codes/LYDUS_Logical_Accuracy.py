@@ -225,7 +225,7 @@ def get_logical_accuracy(quiq:pd.DataFrame,
             var_list_target = [target_variable]
             evaluate_mode[0] = 1
         else :
-            assert True, 'FAIL - Invalid target variable name. Please check and try again.' 
+            assert False, 'FAIL - Invalid target variable name. Please check and try again.' 
     else : # automatic mode면
         evaluate_mode = [-1] * automatic_num
         var_list_target = [''] * automatic_num
@@ -671,3 +671,4 @@ if __name__ == '__main__' :
         file.write(f'Outlier Num = {outlier_num}\n')
 
     print('<SUCCESS>')
+
