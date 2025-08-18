@@ -12,22 +12,20 @@ def get_structured_fidelity(quiq:pd.DataFrame) -> pd.DataFrame:
     df['Variable_type'] = df['Variable_type'].astype(str)
     #df['Is_categorical'] = pd.to_numeric(df['Is_categorical'], errors = 'coerce')
 
-    df_results = pd.DataFrame(columns = ['Category', 'Original_table_name', 'Variable_name', 'Value', 'Patient_num', 'Mean', 'Std']) # 통합 데이터 프레임
+    df_results = pd.DataFrame(columns = ['Original_table_name', 'Variable_name', 'Value', 'Patient_num', 'Mean', 'Std']) # 통합 데이터 프레임
     
     # Event
     print('\nCategory : Event')
     df_event = df.loc[df['Mapping_info_1'].str.contains('event', case = False, na = False)] # 숫자값 포함 O
-    df_event = df_event.rename(columns = {'Mapping_info_1' : 'Category'}) 
-    df_event['Category'] = 'Event'
     df_event = df_event.dropna(subset = ['Patient_id', 'Value'])
     
     if len(df_event) > 0 : 
     
-        df_grouped = df_event.groupby(['Category', 'Original_table_name', 'Variable_name', 'Patient_id']).agg(
+        df_grouped = df_event.groupby(['Original_table_name', 'Variable_name', 'Patient_id']).agg(
             Frequency = ('Value', 'count')
         ).reset_index()
 
-        df_agg = df_grouped.groupby(['Category', 'Original_table_name', 'Variable_name']).agg(
+        df_agg = df_grouped.groupby(['Original_table_name', 'Variable_name']).agg(
             Patient_num = ('Patient_id', 'nunique'),
             Mean = ('Frequency', 'mean'),
             Std = ('Frequency', 'std')
@@ -46,17 +44,15 @@ def get_structured_fidelity(quiq:pd.DataFrame) -> pd.DataFrame:
     print('\nCategory : Diagnosis')
     df_diagnosis = df.loc[df['Mapping_info_1'].str.contains('diagnosis', case = False, na = False)]
     df_diagnosis = df_diagnosis[df_diagnosis['Is_categorical'] == 1] # 숫자값 포함 X
-    df_diagnosis = df_diagnosis.rename(columns = {'Mapping_info_1' : 'Category'})
-    df_diagnosis['Category'] = 'Diagnosis'
     df_diagnosis = df_diagnosis.dropna(subset = ['Patient_id', 'Value'])
     
     if len(df_diagnosis) > 0 : 
         df_diagnosis['Dummy'] = df_diagnosis['Value'].copy()
-        df_grouped = df_diagnosis.groupby(['Category', 'Original_table_name', 'Variable_name', 'Value', 'Patient_id']).agg(
+        df_grouped = df_diagnosis.groupby(['Original_table_name', 'Variable_name', 'Value', 'Patient_id']).agg(
             Frequency = ('Dummy', 'count')
         ).reset_index()
 
-        df_agg = df_grouped.groupby(['Category', 'Original_table_name', 'Variable_name', 'Value']).agg(
+        df_agg = df_grouped.groupby(['Original_table_name', 'Variable_name', 'Value']).agg(
             Patient_num = ('Patient_id', 'nunique'),
             Mean = ('Frequency', 'mean'),
             Std = ('Frequency', 'std')
@@ -73,17 +69,15 @@ def get_structured_fidelity(quiq:pd.DataFrame) -> pd.DataFrame:
     print('\nCategory : Prescription')
     df_prescription = df.loc[df['Mapping_info_1'].str.contains('prescription', case = False, na = False)]
     df_prescription = df_prescription[df_prescription['Is_categorical'] == 1] # 숫자값 포함 X
-    df_prescription = df_prescription.rename(columns = {'Mapping_info_1' : 'Category'})
-    df_prescription['Category'] = 'Prescription'
     df_prescription = df_prescription.dropna(subset = ['Patient_id', 'Value'])
     
     if len(df_prescription) > 0 : 
         df_prescription['Dummy'] = df_prescription['Value'].copy()
-        df_grouped = df_prescription.groupby(['Category', 'Original_table_name', 'Variable_name', 'Value', 'Patient_id']).agg(
+        df_grouped = df_prescription.groupby(['Original_table_name', 'Variable_name', 'Value', 'Patient_id']).agg(
             Frequency = ('Dummy', 'count')
         ).reset_index()
 
-        df_agg = df_grouped.groupby(['Category', 'Original_table_name', 'Variable_name', 'Value']).agg(
+        df_agg = df_grouped.groupby(['Original_table_name', 'Variable_name', 'Value']).agg(
             Patient_num = ('Patient_id', 'nunique'),
             Mean = ('Frequency', 'mean'),
             Std = ('Frequency', 'std')
@@ -98,17 +92,15 @@ def get_structured_fidelity(quiq:pd.DataFrame) -> pd.DataFrame:
     print('\nCategory : Procedure')
     df_procedure = df.loc[df['Mapping_info_1'].str.contains('procedure', case = False, na = False)]
     df_procedure = df_procedure[df_procedure['Is_categorical'] == 1] # 숫자값 포함 X
-    df_procedure = df_procedure.rename(columns = {'Mapping_info_1' : 'Category'})
-    df_procedure['Category'] = 'Procedure'
     df_procedure = df_procedure.dropna(subset = ['Patient_id', 'Value'])
     
     if len(df_procedure) > 0 : 
         df_procedure['Dummy'] = df_procedure['Value'].copy()
-        df_grouped = df_procedure.groupby(['Category', 'Original_table_name', 'Variable_name', 'Value', 'Patient_id']).agg(
+        df_grouped = df_procedure.groupby(['Original_table_name', 'Variable_name', 'Value', 'Patient_id']).agg(
             Frequency = ('Dummy', 'count')
         ).reset_index()
 
-        df_agg = df_grouped.groupby(['Category', 'Original_table_name', 'Variable_name', 'Value']).agg(
+        df_agg = df_grouped.groupby(['Original_table_name', 'Variable_name', 'Value']).agg(
             Patient_num = ('Patient_id', 'nunique'),
             Mean = ('Frequency', 'mean'),
             Std = ('Frequency', 'std')
