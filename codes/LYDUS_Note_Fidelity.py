@@ -105,7 +105,7 @@ def _run_radiology(df: pd.DataFrame, client: openai.OpenAI, model: str) -> Tuple
         "Echocardiography": """Left ventricle :\nLeft atrium :\nRight atrium :\nRight ventricle :\nAortic valve :\nMitral valve :\nTricuspid valve :\nPulmonic valve :\nPericardium :\nAorta :\nPulmonary artery :\nInferior vena cava and pulmonary veins :"""
     }
 
-    system_prompt = """Everything above is a report template, and the text that follows is the actual radiology report.\nWhat I require from you is the following:\nOutput according to the report template.\n- If an item from the template exists in the report, label it only as 'mentioned'.\n- If it doesn't exist, label it only as 'not mentioned'.\n- Never create anything outside of the items in the TEMPLATE.\n- Output format: (template \ud56d\mok): mentioned/not mentioned"""
+    system_prompt = """Input is the template and the corresponding medical record.\nTask: Look at the items in the report template and determine whether each item is present in the medical record. Then classify them as "mentioned" or "not mentioned".\nOutput format\n- (Item from the template): mentioned/not mentioned"""
 
     def process_row(row):
         template = report_templates.get(mapping.get(row['Mapping_info_2'], ""), "")
