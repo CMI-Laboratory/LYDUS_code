@@ -163,12 +163,14 @@ def get_unstructured_fidelity(
     })
     result_df = pd.concat([df1, df2], ignore_index=True)
 
-    summary_df = result_df.groupby('Mapping_info_2')['Fidelity_results'].agg(
+    summary_df = result_df.groupby(['Mapping_info_1', 'Mapping_info_2'])['Fidelity_results'].agg(
         Count='count',
         Fidelity_score_mean=lambda x: round(x.mean(), 2),
         Fidelity_score_std=lambda x: round(x.std(), 2)
     ).reset_index()
-    summary_df['Mapping_info_2'] = summary_df['Mapping_info_2'].map(UNSTRUCTURED_FIDELITY_MAP)
+    summary_df['Mapping_info_2_'] = summary_df['Mapping_info_2'].map(UNSTRUCTURED_FIDELITY_MAP)
+    summary_df = summary_df[['Mapping_info_1', 'Mapping_info_2', 'Mapping_info_2_', 'Count', 'Fidelity_score_mean', 'Fidelity_score_std']]
+    summary_df = summary_df.sort_values(by = 'Fidelity_score_mean', ascending = False)
 
     return df_clinical, df_radiology, result_df, summary_df, mean_clinical, std_clinical, mean_radiology, std_radiology
 
@@ -197,20 +199,20 @@ if __name__ == '__main__':
         api_key=api_key,
     )
 
-    df_clinical.to_csv(f"{save_path}/note_fidelity_clinical_results.csv", index=False)
-    df_radiology.to_csv(f"{save_path}/note_fidelity_radiology_results.csv", index=False)
-    result_df.to_csv(f"{save_path}/note_fidelity_total_results.csv", index=False)
-    summary_df.to_csv(f"{save_path}/note_fidelity_summary_detail.csv", index=False)
+    result_df.to_csv(f"{save_path}/note_fidelity_total_detail.csv", index=False,
+                    columns = ['Mapping_info_1', 'Mapping_info_2', 'Primary_key', 'Original_table_name', 'Variable_name',\
+                               'Event_date', 'Value', 'Fidelity', 'Fidelity_results'])
+    summary_df.to_csv(f"{save_path}/note_fidelity_summary.csv", index=False)
 
     fig, ax = plt.subplots(figsize=(8, 5))
     draw_unst_fidelity_box_plot(ax, result_df)
     fig.tight_layout()
     fig.savefig(f"{save_path}/note_fidelity_plot.png")
 
-    fidelity_stats_df = pd.DataFrame([
-        {"Category": "Clinical", "Fidelity_mean": mean_clinical, "Fidelity_std": std_clinical},
-        {"Category": "Radiology", "Fidelity_mean": mean_radiology, "Fidelity_std": std_radiology}
-    ])
-    fidelity_stats_df.to_csv(f"{save_path}/note_fidelity_summary.csv", index=False)
+    fidelity_scores = result_df['Fidelity_results']
+    mean_fidelity = round(fidelity_scores.mean(), 2)
+
+    with open(save_path + '/note_fidelity_total.txt', 'w', encoding = 'utf-8') as file :
+        file.write(f'Fidelity (%) = {mean_fidelity}\n')
 
     print('\n<SUCCESS>')
