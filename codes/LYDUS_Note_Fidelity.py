@@ -213,6 +213,6 @@ if __name__ == '__main__':
     mean_fidelity = round(fidelity_scores.mean(), 2)
 
     with open(save_path + '/note_fidelity_total.txt', 'w', encoding = 'utf-8') as file :
-        file.write(f'Fidelity (%) = {mean_fidelity}\n')
+        file.write(f'Note Fidelity (%) = {mean_fidelity}\n')
 
     print('\n<SUCCESS>')
