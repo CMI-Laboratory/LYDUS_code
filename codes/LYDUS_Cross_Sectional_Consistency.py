@@ -138,15 +138,15 @@ def _parse_llm_response_by_line(response, unique_array):
         return []
 
 
-def _get_category_counts(df, variable_name, unique_array, description, openai_client, model, attempt=1):
-    unique_array = df[df['Variable_name'] == variable_name]['Value'].dropna().unique()
+def _get_category_counts(df, current_identifier, unique_array, description, openai_client, model, attempt=1):
+    unique_array = df[df['identifier'] == current_identifier]['Value'].dropna().unique()
     
     user_content = ', '.join(unique_array.tolist())
 
-    result = _llm_chat(openai_client, model, variable_name, description, user_content)
+    result = _llm_chat(openai_client, model, current_identifier, description, user_content)
     
     if result is None:
-        print(f"⛔ No LLM response, excluded from evaluation → {variable_name}")
+        print(f"⛔ No LLM response, excluded from evaluation → {current_identifier}")
         return [], {}, False 
     
     response_text = result[0] if result else ""
@@ -158,14 +158,14 @@ def _get_category_counts(df, variable_name, unique_array, description, openai_cl
         category_counts[category[0]] = len(category)
 
     flattened_llm = [normalize(item) for sublist in array_2d for item in sublist]
-    df_var = df[df['Variable_name'] == variable_name]
+    df_var = df[df['identifier'] == current_identifier]
     flattened_df = df_var['Value'].astype(str).apply(normalize)
 
     valid = any(flattened_df.isin(flattened_llm))
     
     if not valid and attempt < 5:  
         print("No valid data matched with LLM categories, retrying classification... ",)
-        return _get_category_counts(df, variable_name, unique_array, description, openai_client, model, attempt + 1)
+        return _get_category_counts(df, current_identifier, unique_array, description, openai_client, model, attempt + 1)
     
     return array_2d, category_counts, valid
 
@@ -238,7 +238,7 @@ def get_cross_sectional_consistency(
         
         description = description_map.get(current_identifier, "No description available")
 
-        array_2d, category_counts, valid = _get_category_counts(target_df, TARGET_VARIABLE, unique_array, description, client, model)
+        array_2d, category_counts, valid = _get_category_counts(target_df, current_identifier, unique_array, description, client, model)
         if not valid:  
             continue
 
