@@ -28,12 +28,18 @@ MAPPING_INFO_2 = {
 
 def draw_unstructured_accuracy_box_plot(ax:Axes, result_df:pd.DataFrame):
     ax.clear()
-    valid_categories = ["note_rad", "note_clinical"]
-    filtered_data = result_df[result_df['Mapping_info_1'].isin(valid_categories)].copy()
-    filtered_data['Accuracy_results'] = filtered_data['Accuracy_results']
-    sns.barplot(x='Mapping_info_1', y='Accuracy_results', data=filtered_data, errorbar=('ci', 95), ax=ax)
+    valid_categories = list(MAPPING_INFO_2.keys())
+    filtered_data = result_df[result_df['Mapping_info_2'].isin(valid_categories)].copy()
+    filtered_data['Mapping_info_2'] = filtered_data['Mapping_info_2'].map(MAPPING_INFO_2)
+    #filtered_data['Fidelity_results'] *= 100
+    sns.boxplot(x='Mapping_info_2', y='Accuracy_results', data=filtered_data, ax=ax)
+    sns.stripplot(x='Mapping_info_2', y='Accuracy_results', data=filtered_data, color='blue', jitter=True, alpha=0.5, size=10, ax=ax)
     ax.set_xlabel('Category', fontsize=12)
-    ax.set_ylabel('Accuracy Results', fontsize=12)
+    ax.set_ylabel('Accuracy Results (%)', fontsize=12)
+    ax.set_ylim(0, 100)
+    ax.set_xticks(range(len(filtered_data['Mapping_info_2'].unique())))
+    ax.set_xticklabels(filtered_data['Mapping_info_2'].unique(), rotation=30)
+    ax.grid()
 
 def _run_clinical(quiq: pd.DataFrame, openai_client: openai.OpenAI, model: str) :
     client = openai_client
@@ -238,10 +244,10 @@ def get_unstructured_accuracy(quiq: pd.DataFrame, model: str, api_key: str) -> T
 
     summary_df = result_df.groupby(['Mapping_info_1', 'Mapping_info_2])['Accuracy_results'].agg(
         Count='count',
-        Accuracy_score_mean='mean',
-        Accuracy_score_std='std'
+        Accuracy_score_mean=lambda x: round(x.mean(), 2),
+        Accuracy_score_std=lambda x: round(x.std(), 2)
     ).reset_index()
-    summary_df['Info'] = summary_df['Mapping_info_2'].map(MAPPING_INFO_2)
+    summary_df['Mapping_info_2_'] = summary_df['Mapping_info_2'].map(MAPPING_INFO_2)
     summary_df = summary_df[['Mapping_info_1', 'Mapping_info_2', 'Mapping_info_2_', 'Count', 'Accuracy_score_mean', 'Accuracy_score_std']]
     summary_df = summary_df.sort_values(by = 'Accuracy_score_mean', ascending = False)
 
@@ -277,7 +283,7 @@ if __name__ == '__main__':
     summary_df.to_csv(f"{save_path}/note_accuracy_summary.csv", index=False)
 
     fig, ax = plt.subplots(figsize=(8, 5))
-    draw_unst_accuracy_box_plot(ax, result_df)
+    draw_unstructured_accuracy_box_plot(ax, result_df)
     fig.tight_layout()
     fig.savefig(f"{save_path}/note_accuracy_plot.png")
 
