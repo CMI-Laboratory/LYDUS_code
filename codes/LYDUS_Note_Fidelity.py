@@ -9,7 +9,7 @@ from typing import Tuple, Union
 from matplotlib.axes import Axes
 from tqdm import tqdm
 
-UNSTRUCTURED_FIDELITY_MAP = {
+MAPPING_INFO_2 = {
     "ACT": "CT abdomen",
     "BCT": "CT brain",
     "CCT": "CT chest",
@@ -26,9 +26,9 @@ UNSTRUCTURED_FIDELITY_MAP = {
 
 def draw_unst_fidelity_box_plot(ax: Axes, result_df: pd.DataFrame):
     ax.clear()
-    valid_categories = list(UNSTRUCTURED_FIDELITY_MAP.keys())
+    valid_categories = list(MAPPING_INFO_2.keys())
     filtered_data = result_df[result_df['Mapping_info_2'].isin(valid_categories)].copy()
-    filtered_data['Mapping_info_2'] = filtered_data['Mapping_info_2'].map(UNSTRUCTURED_FIDELITY_MAP)
+    filtered_data['Mapping_info_2'] = filtered_data['Mapping_info_2'].map(MAPPING_INFO_2)
     #filtered_data['Fidelity_results'] *= 100
     sns.boxplot(x='Mapping_info_2', y='Fidelity_results', data=filtered_data, ax=ax)
     sns.stripplot(x='Mapping_info_2', y='Fidelity_results', data=filtered_data, color='blue', jitter=True, alpha=0.5, size=10, ax=ax)
@@ -92,7 +92,7 @@ def _run_clinical(df: pd.DataFrame, client: openai.OpenAI, model: str) -> Tuple[
 def _run_radiology(df: pd.DataFrame, client: openai.OpenAI, model: str) -> Tuple[pd.DataFrame, float, float]:
     tqdm.pandas(desc="Running fidelity (radiology)")
     df = df[df['Mapping_info_1'] == 'note_rad'].copy()
-    mapping = {k: v for k, v in UNSTRUCTURED_FIDELITY_MAP.items() if k in ["ACT", "BCT", "CCT", "SCT", "CXR", "AXR", "SXR", "ECH"]}
+    mapping = {k: v for k, v in MAPPING_INFO_2.items() if k in ["ACT", "BCT", "CCT", "SCT", "CXR", "AXR", "SXR", "ECH"]}
 
     report_templates = {
         "CT abdomen": """Liver :\nGallbladder :\nSpleen :\nPancreas :\nAdrenals :\nKidneys :\nBowel :\nMesentery/Peritoneum :\nNodes :\nPelvis :\nBone windows :\nVasculature :\nSoft Tissues :""",
@@ -168,7 +168,7 @@ def get_unstructured_fidelity(
         Fidelity_score_mean=lambda x: round(x.mean(), 2),
         Fidelity_score_std=lambda x: round(x.std(), 2)
     ).reset_index()
-    summary_df['Mapping_info_2_'] = summary_df['Mapping_info_2'].map(UNSTRUCTURED_FIDELITY_MAP)
+    summary_df['Mapping_info_2_'] = summary_df['Mapping_info_2'].map(MAPPING_INFO_2)
     summary_df = summary_df[['Mapping_info_1', 'Mapping_info_2', 'Mapping_info_2_', 'Count', 'Fidelity_score_mean', 'Fidelity_score_std']]
     summary_df = summary_df.sort_values(by = 'Fidelity_score_mean', ascending = False)
 
