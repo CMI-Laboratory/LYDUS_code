@@ -11,6 +11,21 @@ from typing import Tuple, Union
 from matplotlib.axes import Axes
 import matplotlib.pyplot as plt
 
+MAPPING_INFO_2 = {
+    "ACT": "CT abdomen",
+    "BCT": "CT brain",
+    "CCT": "CT chest",
+    "SCT": "CT spine",
+    "CXR": "X-ray chest",
+    "AXR": "X-ray abdomen",
+    "SXR": "X-ray spine",
+    "ECH": "Echocardiography",
+    "ADM": "Admission note",
+    "DIS": "Discharge summary",
+    "SUR": "Surgery note",
+    "EME": "Emergency note"
+}
+
 def draw_unstructured_accuracy_box_plot(ax:Axes, result_df:pd.DataFrame):
     ax.clear()
     valid_categories = ["note_rad", "note_clinical"]
@@ -221,13 +236,15 @@ def get_unstructured_accuracy(quiq: pd.DataFrame, model: str, api_key: str) -> T
     result_df = pd.concat([df_clinical_renamed, df_radiology_renamed], ignore_index=True)
     result_df = result_df.dropna(subset=['Accuracy_results'])
 
-    summary_df = result_df.groupby('Mapping_info_1')['Accuracy_results'].agg(
+    summary_df = result_df.groupby(['Mapping_info_1', 'Mapping_info_2])['Accuracy_results'].agg(
         Count='count',
         Accuracy_score_mean='mean',
         Accuracy_score_std='std'
     ).reset_index()
-    summary_df['Accuracy_score_mean'] = summary_df['Accuracy_score_mean'].round(2)
-    summary_df['Accuracy_score_std'] = summary_df['Accuracy_score_std'].round(2)
+    summary_df['Info'] = summary_df['Mapping_info_2'].map(MAPPING_INFO_2)
+    summary_df = summary_df[['Mapping_info_1', 'Mapping_info_2', 'Mapping_info_2_', 'Count', 'Accuracy_score_mean', 'Accuracy_score_std']]
+    summary_df = summary_df.sort_values(by = 'Accuracy_score_mean', ascending = False)
+
 
     return df_clinical, df_radiology, result_df, summary_df
 
@@ -254,14 +271,20 @@ if __name__ == '__main__':
         api_key=api_key,
     )
 
-    df_clinical.to_csv(f"{save_path}/note_accuracy_clinical_results.csv", index=False)
-    df_radiology.to_csv(f"{save_path}/note_accuracy_radiology_results.csv", index=False)
-    result_df.to_csv(f"{save_path}/note_accuracy_total_results.csv", index=False)
+    result_df.to_csv(f"{save_path}/note_accuracy_total_detail.csv", index=False,
+                    columns = ['Mapping_info_1', 'Mapping_info_2', 'Primary_key', 'Original_table_name', 'Variable_name',\
+                               'Event_date', 'Value', 'Accuracy', 'Accuracy_results'])
     summary_df.to_csv(f"{save_path}/note_accuracy_summary.csv", index=False)
 
-    fig, ax = plt.subplots(figsize=(6, 4))
-    draw_unstructured_accuracy_box_plot(ax, result_df)
+    fig, ax = plt.subplots(figsize=(8, 5))
+    draw_unst_accuracy_box_plot(ax, result_df)
     fig.tight_layout()
     fig.savefig(f"{save_path}/note_accuracy_plot.png")
+
+    accuracy_scores = result_df['Accuracy_results']
+    mean_accuracy = round(accuracy_scores.mean(), 2)
+
+    with open(save_path + '/note_accuracy_total.txt', 'w', encoding = 'utf-8') as file :
+        file.write(f'Note Accuracy (%) = {mean_accuracy}\n')
 
     print('<SUCCESS>')
