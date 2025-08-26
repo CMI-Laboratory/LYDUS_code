@@ -341,7 +341,7 @@ def get_logical_accuracy(quiq:pd.DataFrame,
 
                 df_merged = df_merged.drop(['Event_date', 'Time_diff'], axis = 1)
 
-            elif var_name_recommended in df_others_essential['Variable_name'].unique() : 
+            elif var_name_recommended in df_others_essential['Value'].unique() : 
                 dict_dynamic[var_name_recommended][f'{var_name_recommended}_val'] = 1 
                 df_merged = pd.merge(df_merged, dict_dynamic[var_name_recommended], on = 'Patient_id', how = 'left')
                 df_merged[f'{var_name_recommended}_val'] = df_merged[f'{var_name_recommended}_val'].fillna(0)
@@ -671,6 +671,7 @@ if __name__ == '__main__' :
         file.write(f'Outlier Num = {outlier_num}\n')
 
     print('<SUCCESS>')
+
 
 
 
