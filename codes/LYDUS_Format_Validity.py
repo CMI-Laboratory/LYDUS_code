@@ -115,7 +115,7 @@ def get_code_validity(quiq: pd.DataFrame,
     
     filtered_quiq_df = quiq_df[quiq_df['Mapping_info_1'].str.contains('medical_code', case = False, na = False)] # medical code에 대해서만
     filtered_quiq_df = filtered_quiq_df.dropna(subset = ['Value']) # Value가 비어있는 경우 drop
-    filtered_quiq_df['Value'] = filtered_quiq_df['Value'].astype(str) # 모든 medical code를 string으로 변환
+    filtered_quiq_df['Value'] = filtered_quiq_df['Value'].apply(lambda x : str(int(x)) if (isinstance(x, float) and x.is_integer()) else str(x)) # 모든 medical code를 string으로 변환
     filtered_quiq_df = filtered_quiq_df[['Original_table_name', 'Variable_name', 'Value']] # 필요한 column만 남김
     
     assert len(filtered_quiq_df) > 0, 'FAIL : No value related to medical code'
