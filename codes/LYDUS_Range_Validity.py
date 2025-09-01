@@ -3,32 +3,27 @@ import argparse
 import pandas as pd
 import numpy as np
 import matplotlib.pyplot as plt
+import re
+import os
 
-def draw_box_plot(save_path, order, label_vs_boxplot, box_plot_num):
-
-    labels = order
-    n = min(len(labels), box_plot_num)
-    
-    #print(labels)
-    fig, axs = plt.subplots(1, n, figsize=(4 * max(1, n), 7))
-    fig.set_tight_layout(True)
+def draw_range_validity_box_plot_individual(fig, label, label_vs_boxplot): #1개, dialog용
+    fig.clear()
+   
     flierprops = dict(marker='o', markerfacecolor='green', markersize=2,
                       linestyle='none', alpha=0.2)
-    for i in range(n):
-        label = order[i]
-        ax = axs[i]
-        box_data = label_vs_boxplot.get(label, [])
 
-        if len(box_data) == 0:
-            ax.set_title(f"{label}\n(No data)", fontsize=14, color="gray")
-            ax.set_xticks([])
-            ax.set_yticks([])
-        else:
-            ax.boxplot(box_data, flierprops=flierprops)
-            ax.set_title(label, fontsize=14, fontweight='bold')
-            ax.tick_params(axis='y', labelsize=14)
+    ax = fig.add_subplot(111)
+    box_data = label_vs_boxplot
 
-    plt.savefig(save_path + '/range_validity_boxplot.png', facecolor = 'white')
+    if len(box_data) == 0:
+        ax.set_title(f"{label}\n(No data)", fontsize=14, color="gray")
+        ax.set_xticks([])
+        ax.set_yticks([])
+    else:
+        ax.boxplot(box_data, flierprops=flierprops)
+        ax.set_title(label, fontsize=10, fontweight='bold')
+
+    fig.set_tight_layout(True)
 
 
 def _get_outlier(df=None, column=None, weight=1.5):
@@ -164,6 +159,7 @@ if __name__ == '__main__' :
     
     df_total_outlier, df_summary, label_vs_boxplot = get_range_validity(quiq)
 
+    print('\nSave Results...')
     total_num = df_summary['Total_num'].sum()
     outlier_num = df_summary['Outlier_total_num'].sum()
     range_validity = (total_num - outlier_num) / total_num * 100
@@ -176,10 +172,18 @@ if __name__ == '__main__' :
     
     df_summary.to_csv(save_path + '/range_validity_summary.csv', index = False)
     df_total_outlier.to_csv(save_path + '/range_validity_outlier_total.csv', index = False)
-    
-    df_summary['Identifier'] = df_summary['Original_table_name'] + ' - ' + df_summary['Variable_name']
-    target_list = df_summary['Identifier'][:top_n]
-    draw_box_plot(save_path, target_list, label_vs_boxplot, len(target_list))
+
+    os.makedirs(save_path + '/range_validity_boxplots', exist_ok = True)
+    identifiers = df_summary['Original_table_name'] + ' - ' + df_summary['Variable_name']
+    for idx, identifier_selected in enumerate(identifiers):
+        fig = plt.figure()
+        fig.set_size_inches(3, 6)
+        draw_range_validity_box_plot_individual(fig, identifier_selected, label_vs_boxplot[identifier_selected])
+        table_name, variable_name = identifier_selected.split(' - ')
+        table_name = re.sub(r'[\\/:*?"<>|]', ' ', table_name)
+        variable_name = re.sub(r'[\\/:*?"<>|]', ' ', variable_name)
+        fig.savefig(save_path + '/range_validity_boxplots' + f'/{idx}_{table_name}_{variable_name}.png')
 
     
     print('\n<SUCCESS>')
+
