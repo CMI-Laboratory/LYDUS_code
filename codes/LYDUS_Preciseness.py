@@ -135,7 +135,8 @@ if __name__ == '__main__' :
     save_path = config.get('save_path')
     
     df_summary, histogram_values = get_preciseness(quiq)
-    
+
+    print('\nSave Results...')
     total_num = df_summary['Total_num'].sum()
     preciseness_mul_num_sum = (df_summary['Total_num'] * df_summary['Preciseness (%)']).sum()
     preciseness = round(preciseness_mul_num_sum / total_num, 2)
@@ -153,3 +154,4 @@ if __name__ == '__main__' :
         draw_histogram(save_path, idx, current_identifier, histogram_values[current_identifier])
     
     print('\n<SUCCESS>')
+
