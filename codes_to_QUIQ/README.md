@@ -1,1 +1,1 @@
-Code examples for converting to QUIQ
+Code examples for converting original tables to QUIQ
