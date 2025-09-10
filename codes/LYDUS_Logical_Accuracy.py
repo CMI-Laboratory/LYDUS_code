@@ -1,4 +1,5 @@
 import gc
+import re
 import yaml
 import argparse
 import pandas as pd
@@ -389,8 +390,8 @@ def get_logical_accuracy(quiq:pd.DataFrame,
             X = df_merged.drop(['Patient_id', 'Target_date', f'{var_name_target}_val'], axis = 1)
             y = df_merged[f'{var_name_target}_val']
 
-            X.columns = X.columns.str.replace(' ', '_') 
-            y.name = y.name.replace(' ', '_')
+            X.columns = X.columns.str.replace(r'\W', '_', regex = True) 
+            y.name = re.sub(r'\W', '_', y.name)
 
             formula = y.name
             formula += ' ~ '
@@ -671,6 +672,7 @@ if __name__ == '__main__' :
         file.write(f'Outlier Num = {outlier_num}\n')
 
     print('<SUCCESS>')
+
 
 
 
