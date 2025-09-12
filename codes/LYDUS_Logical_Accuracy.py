@@ -366,8 +366,8 @@ def get_logical_accuracy(quiq:pd.DataFrame,
 
         if len(df_sex_essential) > 0 :
             onehot_sex = pd.get_dummies(df_sex_essential['Value'], prefix = 'Sex').iloc[:, 1:].astype(int)
-            df_sex_essential = pd.concat([df_sex_essential, onehot_sex], axis = 1)
-            df_merged = pd.merge(df_merged, df_sex_essential, on = 'Patient_id', how = 'left')
+            df_sex_essential_concat = pd.concat([df_sex_essential, onehot_sex], axis = 1)
+            df_merged = pd.merge(df_merged, df_sex_essential_concat, on = 'Patient_id', how = 'left')
             df_merged = df_merged.dropna() 
             df_merged = df_merged.drop(['Value'], axis = 1)
 
@@ -672,6 +672,7 @@ if __name__ == '__main__' :
         file.write(f'Outlier Num = {outlier_num}\n')
 
     print('<SUCCESS>')
+
 
 
 
