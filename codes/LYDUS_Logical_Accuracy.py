@@ -261,6 +261,7 @@ def get_logical_accuracy(quiq:pd.DataFrame,
     dict_outlier = {}
 
     for loop, var_name_target in enumerate(var_list_target) :
+        flag = 0
         print(f'\n# LOOP {loop+1} - Target Variable : {var_name_target}\n')
           
         var_evaluate_mode = evaluate_mode[loop]
@@ -360,7 +361,12 @@ def get_logical_accuracy(quiq:pd.DataFrame,
                 df_merged = df_merged.drop(['Event_date', 'Time_diff'], axis = 1)
 
             else :
-                assert False, 'FAIL - Variable name mismatch detected.' 
+                print('FAIL - Variable name mismatch detected.')
+                flag = 1
+                break
+
+        if flag == 1 :
+            continue
 
             gc.collect()
 
@@ -378,7 +384,10 @@ def get_logical_accuracy(quiq:pd.DataFrame,
             df_merged['Age'] = (df_merged['Target_date'].dt.to_pydatetime() - df_merged['Value'].dt.to_pydatetime())
             df_merged['Age'] = [timedelta.days / 365.25 for timedelta in df_merged['Age']]
             df_merged = df_merged.drop(['Value'], axis = 1)
-          
+
+        if len(df_merged) == 0 :
+            print('FAIL - Failed to construct the clinical context vector.')
+            continue
           
         df_result = df_merged.copy() 
 
@@ -652,14 +661,20 @@ if __name__ == '__main__' :
     df_summary = pd.DataFrame(columns = ['Target Variable', 'Total Num', 'Outlier Num' 'Logical Accuracy (%)'])
     for idx, var_name_target in enumerate(var_list_target) :
         df_summary.at[idx, 'Target Variable'] = var_name_target
-        df_summary.at[idx, 'Total Num'] = len(dict_total[var_name_target])
-        total_num += len(dict_total[var_name_target])
-        df_summary.at[idx, 'Outlier Num'] = len(dict_outlier[var_name_target])
-        outlier_num += len(dict_outlier[var_name_target])
-        df_summary.at[idx, 'Logical Accuracy (%)'] = (df_summary.at[idx, 'Total Num'] - df_summary.at[idx, 'Outlier Num']) / df_summary.at[idx, 'Total Num'] * 100
-        df_summary.at[idx, 'Logical Accuracy (%)'] = round(df_summary.at[idx, 'Logical Accuracy (%)'], 2)
-        if len(dict_outlier[var_name_target]) > 0 :
-            dict_outlier[var_name_target].to_csv(save_path + f'/outlier_{idx}_{var_name_target}.csv', index = False)
+        try :
+            df_summary.at[idx, 'Total Num'] = len(dict_total[var_name_target])
+            total_num += len(dict_total[var_name_target])
+            df_summary.at[idx, 'Outlier Num'] = len(dict_outlier[var_name_target])
+            outlier_num += len(dict_outlier[var_name_target])
+            df_summary.at[idx, 'Logical Accuracy (%)'] = (df_summary.at[idx, 'Total Num'] - df_summary.at[idx, 'Outlier Num']) / df_summary.at[idx, 'Total Num'] * 100
+            df_summary.at[idx, 'Logical Accuracy (%)'] = round(df_summary.at[idx, 'Logical Accuracy (%)'], 2)
+
+            if len(dict_outlier[var_name_target]) > 0 :
+                dict_outlier[var_name_target].to_csv(save_path + f'/outlier_{idx}_{var_name_target}.csv', index = False)
+        except :
+            df_summary.at[idx, 'Total Num'] = np.nan
+            df_summary.at[idx, 'Outlier Num'] = np.nan
+            df_summary.at[idx, 'Logical Accuracy (%)'] = np.nan
         
     df_summary.to_csv(save_path + '/logical_accuracy_summary.csv', index = False)
 
@@ -672,6 +687,7 @@ if __name__ == '__main__' :
         file.write(f'Outlier Num = {outlier_num}\n')
 
     print('<SUCCESS>')
+
 
 
 
