@@ -122,19 +122,22 @@ def _run_clinical(quiq: pd.DataFrame, openai_client: openai.OpenAI, model: str) 
     process_rows(value_col='Value', result_col='Accuracy_clinical')
 
     def check_error1(cell_content):
-        lines = cell_content.split('\n')
-        columns_to_check = ['Diagnostic Information Error', 'Procedure Information Error']
-        total_count = 0
-        no_error_count = 0
-        for line in lines:
-            for col in columns_to_check:
-                if col in line:
-                    total_count += 1
-                    if 'No' in line:
-                        no_error_count += 1
-        if total_count == 0:
+        try : 
+            lines = cell_content.split('\n')
+            columns_to_check = ['Diagnostic Information Error', 'Procedure Information Error']
+            total_count = 0
+            no_error_count = 0
+            for line in lines:
+                for col in columns_to_check:
+                    if col in line:
+                        total_count += 1
+                        if 'No' in line:
+                            no_error_count += 1
+            if total_count == 0:
+                return None
+            return no_error_count / total_count * 100
+        except :
             return None
-        return no_error_count / total_count * 100
 
     if 'Accuracy_clinical' not in df.columns:
         df.insert(len(df.columns), 'Accuracy_clinical', None)
