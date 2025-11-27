@@ -7,6 +7,7 @@ import pandas as pd
 import numpy as np
 from collections import Counter
 import matplotlib.pyplot as plt
+from decimal import Decimal
 
 def draw_histogram (save_path, idx, identifier, hist_values) :
     table_name, variable_name = identifier.split(' - ')
@@ -33,12 +34,11 @@ def _gini_simpson(data):
     return gini_index, diversity
 
 def _round_at_3(x):
-    x = round(float(x), 3)
-    return x
+    d = Decimal(str(x))
+    return d.quantize(Decimal('0.001'))
 
 def _multiply_by(x, a):
-    x = x * (10**a)
-    return x
+    return x * (Decimal(10) ** a)
 
 def get_preciseness(quiq:pd.DataFrame):    
     
@@ -48,7 +48,7 @@ def get_preciseness(quiq:pd.DataFrame):
     
     df = df[df['Variable_type'].str.contains('numeric', case = False, na = False)]
     df = df[df['Is_categorical'] == 0]
-    df['Value'] = pd.to_numeric(df['Value'], errors = 'coerce')
+    df['Value'] = df['Value'].apply(lambda v: Decimal(str(v)) if pd.notna(v) else np.nan)
     df = df.dropna(subset = 'Value')
     df.reset_index(inplace=True,drop=True)
 
@@ -154,4 +154,5 @@ if __name__ == '__main__' :
         draw_histogram(save_path, idx, current_identifier, histogram_values[current_identifier])
     
     print('\n<SUCCESS>')
+
 
