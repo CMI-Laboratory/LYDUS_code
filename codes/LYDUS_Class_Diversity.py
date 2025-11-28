@@ -16,10 +16,7 @@ def draw_diversity_box_plot(ax:Axes, results_df:pd.DataFrame):
 
 def _filter_categorical(df:pd.DataFrame) -> pd.DataFrame:
     
-    df1 = df[df['Mapping_info_1'].str.contains('diagnosis', case = False, na = False)]
-    df2 = df[df['Mapping_info_1'].str.contains('prescription', case = False, na = False) & df['Mapping_info_2'].str.contains('drug', case = False, na = False)]
-    df3 = df[df['Mapping_info_1'].str.contains('procedure', case = False, na = False)]
-    df = pd.concat([df1, df2, df3], axis = 0)
+    df = df[~df['Mapping_info_1'].str.contains('note|code|date', case=False, na=False)]
     
     df = df[df['Is_categorical'] == 1]
     
