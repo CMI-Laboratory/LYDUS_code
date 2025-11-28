@@ -67,10 +67,11 @@ def get_instance_diversity(quiq:pd.DataFrame):
     df['Mapping_info_2'] = df['Mapping_info_2'].astype(str)
     df['Is_categorical'] = pd.to_numeric(df['Is_categorical'], errors = 'coerce')
      
+    df0 = df[df['Mapping_info_1'].str.contains('event', case = False, na = False)]
     df1 = df[df['Mapping_info_1'].str.contains('diagnosis', case = False, na = False)]
     df2 = df[df['Mapping_info_1'].str.contains('prescription', case = False, na = False) & df['Mapping_info_2'].str.contains('drug', case = False, na = False)]
     df3 = df[df['Mapping_info_1'].str.contains('procedure', case = False, na = False)]
-    df = pd.concat([df1, df2, df3], axis = 0)
+    df = pd.concat([df0, df1, df2, df3], axis = 0)
     
     df = df[df['Is_categorical'] == 1]
     
