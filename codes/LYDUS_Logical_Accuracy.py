@@ -620,8 +620,8 @@ def get_logical_accuracy(quiq:pd.DataFrame,
 
             dict_total[var_name_target] = df_result.copy()
             
-            df_outlier = df_result[df_result[f'SVM_score'] == df_result[f'SVM_0.98']]
-            df_outlier = df_outlier[df_outlier[f'IF_score'] == df_outlier[f'IF_0.98']]
+            df_outlier = df_result[df_result[f'SVM_score'] > df_result[f'SVM_0.98']]
+            df_outlier = df_outlier[df_outlier[f'IF_score'] > df_outlier[f'IF_0.98']]
             df_outlier = df_outlier[df_outlier[f'AE_error'] > df_outlier[f'AE_0.98']]
 
             dict_outlier[var_name_target] = df_outlier.copy()
@@ -687,6 +687,7 @@ if __name__ == '__main__' :
         file.write(f'Outlier Num = {outlier_num}\n')
 
     print('<SUCCESS>')
+
 
 
 
