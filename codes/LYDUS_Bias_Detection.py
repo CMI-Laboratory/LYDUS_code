@@ -472,3 +472,49 @@ def get_bias_detection(quiq, via, config):
 
 
     return df_sex_results, df_race_results, df_age_results
+
+
+
+
+
+
+if __name__ == '__main__': # 아래 내용에 tab
+    print('<LYDUS - Bias Detection>')
+    
+    # py 환경에서 아래 코드 구동
+    parser = argparse.ArgumentParser()
+    parser.add_argument('--config', type=str)
+    args = parser.parse_args()
+    
+    with open(args.config, 'r', encoding='utf-8') as file:
+        config = yaml.safe_load(file)
+    
+    quiq_path = config.get('quiq_path')
+    via_path = config.get('via_path')
+    save_path = config.get('save_path')
+    model_ver = config.get('model_ver')
+    api_key = config.get('api_key')
+    
+    operation_type_manual = config.get('operation_type_manual')
+    target_variable = config.get('target_variable')
+    automatic_num = config.get('automatic_num')
+    recommend_num = config.get('recommend_num')
+    
+    quiq = pd.read_csv(quiq_path)
+    via = pd.read_csv(via_path)
+    
+    config = {'model_ver' : model_ver,
+              'api_key' : api_key,
+              'operation_type_manual' : operation_type_manual,
+              'target_variable' : target_variable,
+              'automatic_num' : automatic_num,
+              'recommend_num' : recommend_num,
+              'save_path' : -1}
+
+    df_sex_results, df_race_results, df_age_results = get_bias_detection(quiq, via, config)
+
+    df_sex_results.to_csv(save_path + '/bias_sex_summary.csv', index=False)
+    df_race_results.to_csv(save_path + '/bias_race_summary.csv', index=False)
+    df_age_results.to_csv(save_path + '/bias_age_summary.csv', index=False)
+    
+    print('\n<SUCCESS>')
