@@ -25,7 +25,7 @@ def draw_auroc_plot (save_path, category, category_results) :
 
     plt.tight_layout()
 
-    if save_path is not None :
+    if save_path != -1 :
         plt.savefig(save_path + f'/{category} - AUROC plot.png', facecolor = 'white')
 
 
@@ -82,7 +82,7 @@ def detect_change_point(category, save_path, df_pivot, df_years) : # Year # AURO
             year = df_years.at[idx, 'Year']
             plt.figure()
             shap.summary_plot(shap_values, X_test, plot_type = 'bar', show=False)
-            if save_path is not None :
+            if save_path != -1 :
                 plt.savefig(save_path+f'/{category} ({year}) - SHAP Plot.png', facecolor = 'white', bbox_inches = 'tight')
 
 
