@@ -1,0 +1,9 @@
+quiq_path: /path/to/your/quiq.csv
+via_path: /path/to/your/via.csv
+save_path: /path/to/save/results
+model_ver: your-model-ver
+api_key: your-api-key
+operation_type_manual: False
+target_variable: Glucose
+automatic_num: 3
+recommend_num: 3
