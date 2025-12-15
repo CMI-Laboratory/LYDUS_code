@@ -513,8 +513,11 @@ if __name__ == '__main__': # 아래 내용에 tab
 
     df_sex_results, df_race_results, df_age_results = get_bias_detection(quiq, via, config)
 
-    df_sex_results.to_csv(save_path + '/bias_sex_summary.csv', index=False)
-    df_race_results.to_csv(save_path + '/bias_race_summary.csv', index=False)
-    df_age_results.to_csv(save_path + '/bias_age_summary.csv', index=False)
+    if len(df_sex_results) > 0 :
+        df_sex_results.to_csv(save_path + '/bias_sex_summary.csv', index=False)
+    if len(df_race_results) > 0 :
+        df_race_results.to_csv(save_path + '/bias_race_summary.csv', index=False)
+    if len(df_age_results) > 0 :
+        df_age_results.to_csv(save_path + '/bias_age_summary.csv', index=False)
     
     print('\n<SUCCESS>')
