@@ -245,7 +245,7 @@ def get_unstructured_accuracy(quiq: pd.DataFrame, model: str, api_key: str) -> T
     result_df = pd.concat([df_clinical_renamed, df_radiology_renamed], ignore_index=True)
     result_df = result_df.dropna(subset=['Accuracy_results'])
 
-    summary_df = result_df.groupby(['Mapping_info_1', 'Mapping_info_2])['Accuracy_results'].agg(
+    summary_df = result_df.groupby(['Mapping_info_1', 'Mapping_info_2'])['Accuracy_results'].agg(
         Count='count',
         Accuracy_score_mean=lambda x: round(x.mean(), 2),
         Accuracy_score_std=lambda x: round(x.std(), 2)
