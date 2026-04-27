@@ -120,7 +120,6 @@ def build_result_dataframe(pair_df):
   df['A_var_name'] = df['A']
   df['B_var_name'] = df['B']
 
-  # 핵심: 표기가 다르면 hetero
   df['Is_hetero'] = df.apply(
       lambda row: row['A_var_name'] != row['B_var_name'],
       axis=1
@@ -130,13 +129,10 @@ def build_result_dataframe(pair_df):
 
 def run_full_pipeline(df_A, df_B, client, model):
 
-    # 1. 변수 추출
     A_list, B_list = extract_variable_lists(df_A, df_B)
-
-    # 2. LLM 매칭
+  
     pair_df = run_llm_pair_matching(client, model, A_list, B_list)
 
-    # 3. 결과 테이블 생성
     result_df = build_result_dataframe(pair_df)
 
     return result_df
@@ -209,11 +205,9 @@ def parse_cluster_output(text):
       if ":" not in line:
           continue
 
-      # 왼쪽 = cluster name (Alive, Dead 등)
       key, values_str = line.split(":", 1)
       key = key.strip().lower()
 
-      # 따옴표 안 값 추출
       values = re.findall(r"'(.*?)'", values_str)
 
       if len(values) > 0:
@@ -230,10 +224,6 @@ def compute_surface_mismatch_from_pairs(df_A, df_B, pair_df, client, model):
       var_B = row['B_var_name']
       variable_name = f'var_A{var_B}'
 
-      ########################################
-      # 🔥 각 변수의 value 추출
-      ########################################
-
       VA = df_A[df_A['Variable_name'].str.lower().str.strip() == var_A]['Value'] \
               .dropna().unique().tolist()
 
@@ -242,16 +232,8 @@ def compute_surface_mismatch_from_pairs(df_A, df_B, pair_df, client, model):
 
       union_values = list(set(VA + VB))
 
-      ########################################
-      # 🔥 LLM clustering
-      ########################################
-
       cluster_text = build_value_clusters_with_llm(client, model, variable_name, union_values)
       cluster_dict = parse_cluster_output(cluster_text)
-
-      ########################################
-      # 🔥 mismatch 계산
-      ########################################
 
       mismatch_count = 0
       total_clusters = 0
@@ -322,7 +304,6 @@ def get_site_representative(values, site_values):
   if not candidates:
       return None
 
-  # 🔥 가장 많이 등장한 값 선택
   return max(set(candidates), key=candidates.count)
 
 
@@ -333,7 +314,6 @@ def build_value_to_cluster_from_surface(cluster_detail):
   for item in cluster_detail:
       c = item["cluster"]
 
-      # A + B 모두 포함해야 함 (중요)
       for v in item["A_values"] + item["B_values"]:
           if v not in value_to_cluster:
               value_to_cluster[v] = c
@@ -341,9 +321,7 @@ def build_value_to_cluster_from_surface(cluster_detail):
   return value_to_cluster
 
 def build_cluster_labels(cluster_dict, VA, VB):
-  """
-  cluster → 기관별 대표 label 생성
-  """
+
   A_labels = {}
   B_labels = {}
 
@@ -363,9 +341,6 @@ def compute_categorical_distribution_heterogeneity(df_A, df_B, df_surface):
       var_B = row['B_var_name']
       cluster_detail = row['cluster_detail']
 
-      ########################################
-      # value 추출
-      ########################################
       VA = df_A[
           df_A['Variable_name'].str.lower().str.strip() == var_A
       ]['Value'].dropna().tolist()
@@ -377,23 +352,14 @@ def compute_categorical_distribution_heterogeneity(df_A, df_B, df_surface):
       if len(VA) == 0 or len(VB) == 0:
           continue
 
-      ########################################
-      # 🔥 기존 cluster 재사용
-      ########################################
       value_to_cluster = build_value_to_cluster_from_surface(cluster_detail)
 
-      ########################################
-      # normalization
-      ########################################
       A_norm = [value_to_cluster[v] for v in VA if v in value_to_cluster]
       B_norm = [value_to_cluster[v] for v in VB if v in value_to_cluster]
 
       if len(A_norm) == 0 or len(B_norm) == 0:
           continue
 
-      ########################################
-      # 공통 cluster
-      ########################################
       common_categories = list(set(A_norm) & set(B_norm))
 
       if len(common_categories) < 2:
@@ -402,9 +368,6 @@ def compute_categorical_distribution_heterogeneity(df_A, df_B, df_surface):
           A_dist, B_dist = {}, {}
 
       else:
-          ########################################
-          # distribution
-          ########################################
           def get_distribution(values, categories):
             counts = np.array([values.count(c) for c in categories])
             return counts / counts.sum()
@@ -412,15 +375,9 @@ def compute_categorical_distribution_heterogeneity(df_A, df_B, df_surface):
           P = get_distribution(A_norm, common_categories)
           Q = get_distribution(B_norm, common_categories)
 
-          ########################################
-          # JS divergence
-          ########################################
           jsd = js_divergence(P, Q)
           is_hetero = jsd > 0.1
 
-          ########################################
-          # label (대표값)
-          ########################################
           def get_representative(cluster, values):
               return max(
                   [v for v in values if value_to_cluster.get(v) == cluster],
@@ -453,10 +410,6 @@ def compute_categorical_distribution_heterogeneity(df_A, df_B, df_surface):
   return pd.DataFrame(results)
 
 ### Structured 04 - Continuous Variable Distribution Homogeneity
-
-########################################
-# 1. value 전처리
-########################################
 
 def clean_value(x):
     try:
@@ -577,7 +530,6 @@ def detect_distribution_shape(values):
 
   values = np.array(values)
 
-  # 1. bimodality 먼저 체크
   try:
       dip, dip_p = diptest(values)
       if dip_p < 0.05:
