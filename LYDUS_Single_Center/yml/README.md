@@ -1,1 +1,1 @@
-configuration files(.yml) for the metric evaluation
+Configuration files(.yml) for the metric evaluation
