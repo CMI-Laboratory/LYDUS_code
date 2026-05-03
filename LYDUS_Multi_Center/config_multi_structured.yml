@@ -1,0 +1,5 @@
+quiq_a_path: /path/to/your/quiq_a.csv
+quiq_b_path: /path/to/your/quiq_b.csv
+model_ver: your-model-ver
+api_key: your-api-key
+save_path: /path/to/save/results

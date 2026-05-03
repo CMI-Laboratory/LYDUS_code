@@ -1,0 +1,3 @@
+quiq_path: /path/to/your/quiq.csv
+save_path: /path/to/save/results
+top_n: 10
