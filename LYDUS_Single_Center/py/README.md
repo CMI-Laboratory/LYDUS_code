@@ -1,1 +1,1 @@
-python scripts(.py) for the metric evaluation
+Python scripts(.py) for the metric evaluation
