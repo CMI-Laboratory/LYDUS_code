@@ -1,1 +1,1 @@
-Program for Data Quality Metrics in Multi-Center Healthcare Data
+Programs for data quality metrics in multi-center healthcare data
