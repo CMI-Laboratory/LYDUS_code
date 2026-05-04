@@ -896,13 +896,13 @@ if __name__ == '__main__' :
 
   with open(save_path + '/LYDUS_multi_structured_total_results.txt', 'w', encoding = 'utf-8') as file :
     file.write(f'<LYDUS - Multi Structured>\n')
-    file.write(f'01 Variable Name Consistency (%) = {variable_name_consistency}\n')
-    file.write(f'02 Categorical Value Consistency (%) = {categorical_value_consistency}\n')
-    file.write(f'03 Categorical Variable Distribution Homogeneity (%) = {categorical_variable_distribution_homogeniety}\n')
-    file.write(f'04 Continuous Variable Distribution Homogeneity (%) = {continuous_variable_distribution_homogeniety}\n')
-    file.write(f'05 Continuous Variable Distribution Shape Consistency (%) = {continuous_variable_distribution_shape_consistency}\n')
-    file.write(f'06 Measurement Unit Consistency (%) = {measurement_unit_consistency}\n')
-    file.write(f'07 Medical Code Consistency (%) = {medical_code_consistency}')
+    file.write(f'01 Variable Name Consistency (%) = {variable_name_consistency:.2f}\n')
+    file.write(f'02 Categorical Value Consistency (%) = {categorical_value_consistency:.2f}\n')
+    file.write(f'03 Categorical Variable Distribution Homogeneity (%) = {categorical_variable_distribution_homogeniety:.2f}\n')
+    file.write(f'04 Continuous Variable Distribution Homogeneity (%) = {continuous_variable_distribution_homogeniety:.2f}\n')
+    file.write(f'05 Continuous Variable Distribution Shape Consistency (%) = {continuous_variable_distribution_shape_consistency:.2f}\n')
+    file.write(f'06 Measurement Unit Consistency (%) = {measurement_unit_consistency:.2f}\n')
+    file.write(f'07 Medical Code Consistency (%) = {medical_code_consistency:.2f}')
 
   print('SUCCESS')
 
