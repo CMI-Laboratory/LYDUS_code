@@ -56,8 +56,8 @@ def build_pair_mapping_with_llm(client, model, A_list, B_list):
 
   Output format:
   [
-    {{"A": "blood sugar", "B": "glucose"}},
-    {{"A": "heart rate", "B": "hr"}}
+    {{"A": "blood sugar", "B": "glucose", "score": 0.97}},
+    {{"A": "heart rate", "B": "hr", "score": 0.88}}
   ]
 
   Hospital A variables:
@@ -107,10 +107,14 @@ def run_llm_pair_matching(client, model, A_list, B_list, chunk_size=50):
   # 컬럼 정리
   pair_df['A'] = pair_df['A'].apply(normalize)
   pair_df['B'] = pair_df['B'].apply(normalize)
+  pair_df['score'] = pd.to_numeric(pair_df['score'], errors = 'coerce')
+  
+  pair_df = pair_df[pair_df['score'] >= 0.8]
+  pair_df = pair_df.sort_values(by = ['score', 'A', 'B'], ascending = [False, True, True]).reset_index(drop = True)
 
   pair_df = pair_df.drop_duplicates(subset='B', keep='first')
   pair_df = pair_df.drop_duplicates(subset='A', keep='first')
-
+  
   return pair_df
 
 def build_result_dataframe(pair_df):
@@ -364,7 +368,6 @@ def compute_categorical_distribution_heterogeneity(df_A, df_B, df_surface):
 
       if len(common_categories) < 2:
           jsd = np.nan
-          is_hetero = None
           A_dist, B_dist = {}, {}
 
       else:
@@ -376,7 +379,6 @@ def compute_categorical_distribution_heterogeneity(df_A, df_B, df_surface):
           Q = get_distribution(B_norm, common_categories)
 
           jsd = js_divergence(P, Q)
-          is_hetero = jsd > 0.1
 
           def get_representative(cluster, values):
               return max(
@@ -404,7 +406,6 @@ def compute_categorical_distribution_heterogeneity(df_A, df_B, df_surface):
           "A_dist": A_dist,
           "B_dist": B_dist,
           "js_divergence": jsd,
-          "Is_hetero": is_hetero
       })
 
   return pd.DataFrame(results)
@@ -447,14 +448,6 @@ def build_pair_distribution(df_A, df_B, pair_df):
 
   return pd.DataFrame(results)
 
-  
-
-def compute_ks(a, b):
-  if isinstance(a, list) and isinstance(b, list) and len(a) > 0 and len(b) > 0:
-      stat, p = ks_2samp(a, b)
-      return stat, p
-  return np.nan, np.nan
-
 def compute_wd(a, b):
   if isinstance(a, list) and isinstance(b, list) and len(a) > 0 and len(b) > 0:
       return wasserstein_distance(a, b)
@@ -488,69 +481,54 @@ def compute_continuous_variable_distribution_homogeniety(df_A, df_B, pair_df):
 
   merged_dist = build_pair_distribution(quiq_a_, quiq_b_, pair_df)
 
-  merged_dist[['ks_stat', 'ks_p']] = merged_dist.apply(
-    lambda row: pd.Series(compute_ks(row['A_values'], row['B_values'])),
-    axis=1
-  )
   merged_dist['wasserstein_dist'] = merged_dist.apply(
       lambda row: compute_wd(row['A_values'], row['B_values']),
       axis=1
   )
-  merged_dist['ks_hetero_flag'] = merged_dist['ks_p'] < 0.05
 
   merged_dist['wd_normalized'] = merged_dist.apply(normalize_wd, axis=1)
-  merged_dist['wd_hetero_flag'] = merged_dist['wd_normalized'] > 0.5
 
   merged_dist_ = merged_dist.drop(['A_values', 'B_values'], axis=1)
 
   merged_dist_ = merged_dist_[[
       'A_var_name',
       'B_var_name',
-      'ks_stat',
-      'ks_p',
-      'ks_hetero_flag',
       'wasserstein_dist',
       'wd_normalized',
-      'wd_hetero_flag'
   ]]
-
-  merged_dist_['Is_hetero'] = (
-      merged_dist_['ks_hetero_flag'] &
-      merged_dist_['wd_hetero_flag']
-  )
 
   return merged_dist_
 
 ### Structured 05 - Continuous Variable Distribution Shape Consistency
 
-def detect_distribution_shape(values):
+def extract_distribution_features(values):
 
-  if not isinstance(values, list) or len(values) < 20:
-      return "insufficient"
+    if not isinstance(values, list) or len(values) < 20:
+        return {
+            "skew": np.nan,
+            "kurtosis": np.nan,
+            "dip": np.nan
+        }
 
-  values = np.array(values)
+    values = np.array(values)
 
-  try:
-      dip, dip_p = diptest(values)
-      if dip_p < 0.05:
-          return "bimodal"
-  except:
-      pass
+    # skewness
+    sk = skew(values)
 
-  # 2. normality
-  try:
-      stat, p = shapiro(values[:5000])
-  except:
-      return "unknown"
+    # kurtosis
+    kt = kurtosis(values)
 
-  sk = skew(values)
-  kt = kurtosis(values)
+    # dip statistic
+    try:
+        dip, dip_p = diptest(values)
+    except:
+        dip = np.nan
 
-  if p >= 0.05 and abs(sk) < 1 and abs(kt) < 3:
-      return "normal"
-
-  return "non_normal"
-
+    return {
+        "skew": sk,
+        "kurtosis": kt,
+        "dip": dip
+    }
 
 def compute_continuous_variable_distribution_shape_consistency(df_A, df_B, pair_df):
   quiq_a_ = df_A.copy()
@@ -563,32 +541,34 @@ def compute_continuous_variable_distribution_shape_consistency(df_A, df_B, pair_
 
   merged_dist = build_pair_distribution(quiq_a_, quiq_b_, pair_df)
 
-  merged_dist['A_shape'] = merged_dist['A_values'].apply(detect_distribution_shape)
-  merged_dist['B_shape'] = merged_dist['B_values'].apply(detect_distribution_shape)
+  merged_dist['A_feat'] = merged_dist['A_values'].apply(extract_distribution_features)
+  merged_dist['B_feat'] = merged_dist['B_values'].apply(extract_distribution_features)
 
-  # normal vs non-normal mismatch
-  merged_dist['normality_mismatch'] = (
-      ((merged_dist['A_shape'] == 'normal') & (merged_dist['B_shape'] != 'normal')) |
-      ((merged_dist['A_shape'] != 'normal') & (merged_dist['B_shape'] == 'normal'))
+  merged_dist['A_skew'] = merged_dist['A_feat'].apply(lambda x: x['skew'])
+  merged_dist['B_skew'] = merged_dist['B_feat'].apply(lambda x: x['skew'])
+  
+  merged_dist['A_kurtosis'] = merged_dist['A_feat'].apply(lambda x: x['kurtosis'])
+  merged_dist['B_kurtosis'] = merged_dist['B_feat'].apply(lambda x: x['kurtosis'])
+  
+  merged_dist['A_dip'] = merged_dist['A_feat'].apply(lambda x: x['dip'])
+  merged_dist['B_dip'] = merged_dist['B_feat'].apply(lambda x: x['dip'])
+
+  merged_dist['shape_distance'] = (
+    abs(merged_dist['A_skew'] - merged_dist['B_skew']) +
+    abs(merged_dist['A_kurtosis'] - merged_dist['B_kurtosis']) +
+    abs(merged_dist['A_dip'] - merged_dist['B_dip'])
   )
-
-  # bimodal mismatch
-  merged_dist['bimodal_mismatch'] = (
-      ((merged_dist['A_shape'] == 'bimodal') & (merged_dist['B_shape'] != 'bimodal')) |
-      ((merged_dist['A_shape'] != 'bimodal') & (merged_dist['B_shape'] == 'bimodal'))
-  )
-
-  # overall shape mismatch
-  merged_dist['shape_mismatch'] = (
-      merged_dist['A_shape'] != merged_dist['B_shape']
-  )
-
+  
   merged_dist_ = merged_dist[[
-      'A_var_name',
-      'B_var_name',
-      'A_shape',
-      'B_shape',
-      'shape_mismatch'
+    'A_var_name',
+    'B_var_name',
+    'A_skew',
+    'B_skew',
+    'A_kurtosis',
+    'B_kurtosis',
+    'A_dip',
+    'B_dip',
+    'shape_distance'
   ]]
 
   return merged_dist_
@@ -864,21 +844,27 @@ if __name__ == '__main__' :
 
   print('Structured 03 - Categorical Variable Distribution Homogeneity')
   df_cat_dist = compute_categorical_distribution_heterogeneity(df_A_categorical, df_B_categorical, df_surface)
-  categorical_variable_distribution_homogeniety = (1 - df_cat_dist['Is_hetero'].mean()) * 100
+  categorical_variable_distribution_mean = df_cat_dist['js_divergence'].mean()
+  categorical_variable_distribution_std = df_cat_dist['js_divergence'].std()
   df_cat_dist.reset_index(drop = True).to_csv(save_path  + '/03_Categorical_value_distribution_homogeneity.csv')
-  print(f'{categorical_variable_distribution_homogeniety:.3f}\n')
+  print(f'mean: {categorical_variable_distribution_mean:.3f}\n')
+  print(f'std: {categorical_variable_distribution_std:.3f}\n')
 
   print('Structured 04 - Continuous Variable Distribution Homogeneity')
   merged_dist = compute_continuous_variable_distribution_homogeniety(df_A_continuous, df_B_continuous, pair_df_continuous)
-  continuous_variable_distribution_homogeniety = (1 - merged_dist['Is_hetero'].mean()) * 100
+  continuous_variable_distribution_mean = merged_dist['wd_normalized'].mean()
+  continuous_variable_distribution_std = merged_dist['wd_normalized'].std()
   merged_dist.reset_index(drop = True).to_csv(save_path  + '/04_Continuous_variable_distribution_homogeniety.csv')
-  print(f'{continuous_variable_distribution_homogeniety:.3f}\n')
+  print(f'mean: {continuous_variable_distribution_mean:.3f}\n')
+  print(f'std: {continuous_variable_distribution_std:.3f}\n')
 
   print('Structured 05 - Continuous Variable Distribution Shape Consistency')
   merged_dist_2 = compute_continuous_variable_distribution_shape_consistency(df_A_continuous, df_B_continuous, pair_df_continuous)
-  continuous_variable_distribution_shape_consistency = (1 - merged_dist['Is_hetero'].mean()) * 100
+  continuous_variable_distribution_shape_mean = merged_dist_2['shape_distance'].mean()
+  continuous_variable_distribution_shape_std = merged_dist_2['shape_distance'].std()
   merged_dist_2.reset_index(drop = True).to_csv(save_path + '/05_Continuous_variable_distribution_shape_consistency.csv')
-  print(f'{continuous_variable_distribution_shape_consistency:.3f}\n')
+  print(f'mean: {continuous_variable_distribution_shape_mean:.3f}\n')
+  print(f'std: {continuous_variable_distribution_shape_std:.3f}\n')
 
   print('Structured 06 - Measurement Unit Consistency')
   result_unit = compute_measurement_unit_consistency(df_A_unit, df_B_unit, pair_df_unit)
@@ -898,9 +884,12 @@ if __name__ == '__main__' :
     file.write(f'<LYDUS - Multi Structured>\n')
     file.write(f'01 Variable Name Consistency (%) = {variable_name_consistency:.2f}\n')
     file.write(f'02 Categorical Value Consistency (%) = {categorical_value_consistency:.2f}\n')
-    file.write(f'03 Categorical Variable Distribution Homogeneity (%) = {categorical_variable_distribution_homogeniety:.2f}\n')
-    file.write(f'04 Continuous Variable Distribution Homogeneity (%) = {continuous_variable_distribution_homogeniety:.2f}\n')
-    file.write(f'05 Continuous Variable Distribution Shape Consistency (%) = {continuous_variable_distribution_shape_consistency:.2f}\n')
+    file.write(f'03 Categorical Variable Distribution Homogeneity - mean = {categorical_variable_distribution_mean:.2f}\n')
+    file.write(f'03 Categorical Variable Distribution Homogeneity - std = {categorical_variable_distribution_std:.2f}\n')
+    file.write(f'04 Continuous Variable Distribution Homogeneity - mean = {continuous_variable_distribution_mean:.2f}\n')
+    file.write(f'04 Continuous Variable Distribution Homogeneity - std = {continuous_variable_distribution_std:.2f}\n')
+    file.write(f'05 Continuous Variable Distribution Shape Consistency - mean = {continuous_variable_distribution_shape_mean:.2f}\n')
+    file.write(f'05 Continuous Variable Distribution Shape Consistency - std = {continuous_variable_distribution_shape_std:.2f}\n')
     file.write(f'06 Measurement Unit Consistency (%) = {measurement_unit_consistency:.2f}\n')
     file.write(f'07 Medical Code Consistency (%) = {medical_code_consistency:.2f}')
 
