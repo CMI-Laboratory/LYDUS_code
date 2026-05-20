@@ -111,9 +111,6 @@ def run_llm_pair_matching(client, model, A_list, B_list, chunk_size=50):
   
   pair_df = pair_df[pair_df['score'] >= 0.8]
   pair_df = pair_df.sort_values(by = ['score', 'A', 'B'], ascending = [False, True, True]).reset_index(drop = True)
-
-  pair_df = pair_df.drop_duplicates(subset='B', keep='first')
-  pair_df = pair_df.drop_duplicates(subset='A', keep='first')
   
   return pair_df
 
