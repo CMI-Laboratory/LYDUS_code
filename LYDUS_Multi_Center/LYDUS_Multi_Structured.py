@@ -49,8 +49,8 @@ def build_pair_mapping_with_llm(client, model, A_list, B_list):
   1. Only match variables that represent the SAME clinical concept.
   2. Output MUST be valid JSON.
   3. DO NOT include explanations.
-  4. Each variable in A can match AT MOST one variable in B.
-  5. Each variable in B can match AT MOST one variable in A.
+  4. Multiple matches are allowed if they represent the same clinical concept.
+  5. Be conservative and avoid weak semantic matches.
   6. If no match exists, do not include it.
   7. Be conservative (avoid false matches).
 
@@ -111,6 +111,8 @@ def run_llm_pair_matching(client, model, A_list, B_list, chunk_size=50):
   
   pair_df = pair_df[pair_df['score'] >= 0.8]
   pair_df = pair_df.sort_values(by = ['score', 'A', 'B'], ascending = [False, True, True]).reset_index(drop = True)
+
+  pair_df = pair_df.drop_duplicates(subset=['A', 'B'], keep='first')
   
   return pair_df
 
