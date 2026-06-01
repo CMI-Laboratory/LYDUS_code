@@ -658,142 +658,435 @@ def compute_measurement_unit_consistency(df_A, df_B, pair_df) :
 
 ### Structured 07 - Medical Code Consistency
 
-def classify_code_system(code):
-  code = str(code).strip().upper()
+def sample_values(values, n=50, seed=42):
 
-  # -------------------------
-  # ICD-10 / KCD (알파벳 + 숫자)
-  # -------------------------
-  if re.match(r'^[A-Z][0-9]{2}(\.[0-9A-Z]{1,4})?$', code):
-      # KCD는 ICD-10 기반이라 heuristic 유지
-      if '.' not in code and len(code) >= 4:
-          return "KCD"
-      return "ICD-10"
+    values = (
+        pd.Series(values)
+        .dropna()
+        .astype(str)
+        .unique()
+        .tolist()
+    )
 
-  # -------------------------
-  # ICD-9 (숫자 기반)
-  # -------------------------
-  if re.match(r'^[0-9]{3}(\.[0-9]{1,2})?$', code):
-      return "ICD-9"
+    if len(values) <= n:
+        return values
 
-  # -------------------------
-  # CPT (5-digit numeric)
-  # -------------------------
-  if re.match(r'^[0-9]{5}$', code):
-      return "CPT"
+    random.seed(seed)
 
-  # -------------------------
-  # HCPCS (1 letter + 4 digits)
-  # -------------------------
-  if re.match(r'^[A-Z][0-9]{4}$', code):
-      return "HCPCS"
+    return random.sample(values, n)
 
-  # -------------------------
-  # LOINC (e.g., 1234-5)
-  # -------------------------
-  if re.match(r'^[0-9]{1,7}-[0-9]$', code):
-      return "LOINC"
+def infer_variable_metadata_with_llm(
+    client,
+    model,
+    table_name,
+    variable_name,
+    description,
+    sample_values_list
+):
 
-  # -------------------------
-  # RxNorm (numeric, 보통 2~6 digits 이상)
-  # -------------------------
-  if re.match(r'^[0-9]{2,8}$', code):
-      return "RXNORM"
+    prompt = f"""
+You are a medical terminology expert.
 
-  # -------------------------
-  # NDC (10~11 digit, 또는 하이픈 포함)
-  # -------------------------
-  if re.match(r'^(\d{4,5}-\d{3,4}-\d{1,2}|\d{10,11})$', code):
-      return "NDC"
+Your task:
+Infer the most likely medical coding system and semantic type
+for the variable below.
 
-  # -------------------------
-  # ATC (e.g., A10BA02)
-  # -------------------------
-  if re.match(r'^[A-Z][0-9]{2}[A-Z]{2}[0-9]{2}$', code):
-      return "ATC"
+########################################################
+Inference Rules
 
-  # -------------------------
-  # SNOMED CT (numeric, usually long)
-  # -------------------------
-  if re.match(r'^[0-9]{6,18}$', code):
-      return "SNOMED"
+1. Semantic Type Inference
+- Infer the semantic type primarily from:
+  - original table name
+  - variable name
+  - variable description
+- Do NOT rely only on the appearance of the codes.
+- The same coding system may be used for different semantic types depending on context.
+- Semantic types:
+  - DIAGNOSIS
+  - PROCEDURE
+  - LAB
+  - DRUG
+  - OTHER
 
-  return "UNKNOWN"
+########################################################
+2. Code System Inference
+- Infer the coding system using:
+  - metadata context
+  - sample values
+  - observed code patterns
+- Allowed code systems:
+  - ICD-9
+  - ICD-10
+  - CPT
+  - HCPCS
+  - LOINC
+  - RXNORM
+  - NDC
+  - ATC
+  - SNOMED
+  - UNKNOWN
 
-def map_semantic_from_code_system(code_system):
+########################################################
+3. Mixed Coding Systems
+- mixed = true if multiple coding systems appear to coexist.
+- dominant_code_system MUST contain exactly ONE primary system.
+- Even if mixed=true, choose the MOST LIKELY or MOST FREQUENT primary system.
+- Use UNKNOWN only if no reasonable dominant system can be inferred.
+- secondary_code_systems should contain all additional systems except the dominant system.
+- If mixed=false:
+  - secondary_code_systems MUST be an empty list.
 
-  diagnosis_systems = ["ICD-9", "ICD-10", "KCD", "SNOMED"]
-  procedure_systems = ["CPT", "HCPCS"]
-  lab_systems = ["LOINC"]
-  drug_systems = ["RXNORM", "NDC", "ATC"]
+########################################################
+4. General Principles
+- Infer semantic type mainly from:
+  - original table name
+  - variable name
+  - variable description
+- Do NOT determine semantic type from code format alone.
+- The same coding system can be used for different semantic meanings depending on context.
+- Mixed coding systems may exist in the same variable.
 
-  if code_system in diagnosis_systems:
-      return "DIAGNOSIS"
+########################################################
+Output Requirements
+- Output VALID JSON only.
+- Do NOT provide explanations.
+########################################################
+Output format:
 
-  elif code_system in procedure_systems:
-      return "PROCEDURE"
+{{
+  "semantic_type": "DIAGNOSIS",
+  "dominant_code_system": "ICD-10",
+  "mixed": true,
+  "secondary_code_systems": ["ICD-9"]
+}}
 
-  elif code_system in lab_systems:
-      return "LAB"
+########################################################
+Variable Information
 
-  elif code_system in drug_systems:
-      return "DRUG"
+Table Name:
+{table_name}
 
-  else:
-      return "OTHER"
+Variable Name:
+{variable_name}
 
-def summarize_code_system(df):
+Description:
+{description}
 
-  df = df.copy()
+Sample Values:
+{sample_values_list}
+"""
 
-  df["Code_System"] = df["Value"].apply(classify_code_system)
-  df["Semantic_Type"] = df["Code_System"].apply(map_semantic_from_code_system)
+    response = client.responses.create(
+        model=model,
+        input=[{
+            "role": "user",
+            "content": prompt
+        }]
+    )
 
-  summary = (
-      df.groupby(["Variable_name", "Semantic_Type"])["Code_System"]
-      .agg(lambda x: set(x))
-      .reset_index()
-      .rename(columns={"Code_System": "code_system_set"})
-  )
+    text = response.output_text.strip()
 
-  return summary
+    try:
 
-def compute_medical_code_consistency(df_A, df_B):
-  quiq_a_ = df_A.copy()
-  quiq_b_ = df_B.copy()
+        parsed = json.loads(text)
 
-  summary_A = summarize_code_system(quiq_a_)
-  summary_B = summarize_code_system(quiq_b_)
+        return {
+            "semantic_type": parsed.get(
+                "semantic_type",
+                "OTHER"
+            ),
 
-  summary_sem_A = (
-    summary_A.groupby("Semantic_Type")["code_system_set"]
-    .agg(lambda x: set().union(*x))
-    .reset_index()
-  )
+            "dominant_code_system": parsed.get(
+                "dominant_code_system",
+                "UNKNOWN"
+            ),
 
-  summary_sem_B = (
-      summary_B.groupby("Semantic_Type")["code_system_set"]
-      .agg(lambda x: set().union(*x))
-      .reset_index()
-  )
+            "mixed": parsed.get(
+                "mixed",
+                False
+            ),
 
-  merged_sem = pd.merge(
-      summary_sem_A,
-      summary_sem_B,
-      on="Semantic_Type",
-      suffixes=("_A", "_B")
-  )
+            "secondary_code_systems": parsed.get(
+                "secondary_code_systems",
+                []
+            )
+        }
 
-  merged_sem["is_mismatch"] = (
-      merged_sem["code_system_set_A"] != merged_sem["code_system_set_B"]
-  )
+    except:
 
-  merged_sem = merged_sem.rename(columns={"code_system_set_A": "A_code_system",
-                                        "code_system_set_B": "B_code_system",
-                                        "is_mismatch": "Is_mismatch"})
+        print("LLM parsing failure")
+        print(text[:1000])
 
-  return merged_sem
+        return {
+            "semantic_type": "OTHER",
+            "dominant_code_system": "UNKNOWN",
+            "mixed": False,
+            "secondary_code_systems": []
+        }
 
+def build_variable_summary(
+    quiq_df,
+    via_df,
+    center_name,
+    client,
+    model,
+    sample_n=50
+):
+
+    """
+    quiq_df columns:
+        - Original_table_name
+        - Variable_name
+        - Value
+
+    via_df columns:
+        - Original_table_name
+        - Variable_name
+        - Description
+    """
+
+    variable_units = (
+        quiq_df[
+            ["Original_table_name", "Variable_name"]
+        ]
+        .drop_duplicates()
+    )
+
+    results = []
+
+    for _, row in variable_units.iterrows():
+
+        table_name = row["Original_table_name"]
+        variable_name = row["Variable_name"]
+
+        values = (
+            quiq_df.loc[
+                (
+                    quiq_df["Original_table_name"]
+                    == table_name
+                )
+                &
+                (
+                    quiq_df["Variable_name"]
+                    == variable_name
+                ),
+                "Value"
+            ]
+            .dropna()
+            .astype(str)
+            .unique()
+            .tolist()
+        )
+
+        sampled_values = sample_values(
+            values,
+            n=sample_n
+        )
+
+        via_match = via_df.loc[
+            (
+                via_df["Original_table_name"]
+                == table_name
+            )
+            &
+            (
+                via_df["Variable_name"]
+                == variable_name
+            )
+        ]
+
+        if len(via_match) > 0:
+
+            description = (
+                via_match.iloc[0]
+                .get("Description", "")
+            )
+
+        else:
+
+            description = ""
+
+        inferred = infer_variable_metadata_with_llm(
+            client=client,
+            model=model,
+            table_name=table_name,
+            variable_name=variable_name,
+            description=description,
+            sample_values_list=sampled_values
+        )
+
+        results.append({
+
+            "Center":
+                center_name,
+
+            "Original_table_name":
+                table_name,
+
+            "Variable_name":
+                variable_name,
+
+            "Semantic_Type":
+                inferred["semantic_type"],
+
+            "Mixed":
+                inferred["mixed"],
+
+            "Dominant_Code_System":
+                inferred[
+                    "dominant_code_system"
+                ],
+
+            "Secondary_Code_System":
+                (
+                    inferred[
+                        "secondary_code_systems"
+                    ]
+                    if inferred["mixed"]
+                    else []
+                )
+        })
+
+    return pd.DataFrame(results)
+
+def compute_medical_code_consistency(
+    summary_A,
+    summary_B
+):
+
+    def aggregate_systems(df, prefix):
+
+        rows = []
+
+        for semantic_type, subdf in (
+            df.groupby("Semantic_Type")
+        ):
+
+            systems = set()
+
+            for dominant in subdf[
+                "Dominant_Code_System"
+            ]:
+
+                if (
+                    isinstance(dominant, str)
+                    and dominant != "UNKNOWN"
+                ):
+
+                    systems.add(dominant)
+
+            for secondary in subdf[
+                "Secondary_Code_System"
+            ]:
+
+                if isinstance(secondary, list):
+
+                    systems.update(
+                        [
+                            x for x in secondary
+                            if x != "UNKNOWN"
+                        ]
+                    )
+
+            rows.append({
+
+                "Semantic_Type":
+                    semantic_type,
+
+                f"{prefix}_code_system":
+                    systems
+            })
+
+        return pd.DataFrame(rows)
+      
+
+    sem_A = aggregate_systems(
+        summary_A,
+        prefix="A"
+    )
+
+    sem_B = aggregate_systems(
+        summary_B,
+        prefix="B"
+    )
+
+    merged = pd.merge(
+        sem_A,
+        sem_B,
+        on="Semantic_Type",
+        how="outer"
+    )
+
+    merged["A_code_system"] = (
+        merged["A_code_system"]
+        .apply(
+            lambda x:
+            x if isinstance(x, set)
+            else set()
+        )
+    )
+
+    merged["B_code_system"] = (
+        merged["B_code_system"]
+        .apply(
+            lambda x:
+            x if isinstance(x, set)
+            else set()
+        )
+    )
+
+    merged["Is_mismatch"] = (
+        merged["A_code_system"] !=
+        merged["B_code_system"]
+    )
+
+    return merged
+
+
+def run_pipeline_medical_code(
+    df_A,
+    df_B,
+    via_A,
+    via_B,
+    client,
+    model,
+    sample_n=50
+):
+
+    summary_A = build_variable_summary(
+        quiq_df=df_A,
+        center_name="A",
+        via_df=via_A,
+        client=client,
+        model=model,
+        sample_n=sample_n
+    )
+
+    summary_B = build_variable_summary(
+        quiq_df=df_B,
+        center_name="B",
+        via_df=via_B,
+        client=client,
+        model=model,
+        sample_n=sample_n
+    )
+
+
+    variable_summary_df = pd.concat(
+        [summary_A, summary_B],
+        ignore_index=True
+    )
+
+    consistency_df = compute_medical_code_consistency(
+        summary_A,
+        summary_B
+    )
+
+    return (
+        variable_summary_df,
+        consistency_df
+    )
+  
 
 if __name__ == '__main__' :
   print('<LYDUS - Structured Data>\n')
@@ -874,8 +1167,9 @@ if __name__ == '__main__' :
   print('Structured 07 - Medical Code Consistency')
   df_A_medical_code = quiq_a.loc[quiq_a['Mapping_info_1'] == 'medical_code'].copy()
   df_B_medical_code = quiq_b.loc[quiq_b['Mapping_info_1'] == 'medical_code'].copy()
-  merged_sem = compute_medical_code_consistency(df_A_medical_code, df_B_medical_code)
-  medical_code_consistency = (1 - merged_sem['Is_mismatch'].mean()) * 100
+  variable_summary_df, consistency_df = run_pipeline_medical_code(df_A, df_B, via_A, via_B, client, model, sample_n=50)
+  medical_code_consistency = (1 - consistency_df['Is_mismatch'].mean()) * 100
+  variable_summary_df.reset_index(drop = True).to_csv(save_path + '/07_Medical_code_consistency_detail.csv')
   merged_sem.reset_index(drop = True).to_csv(save_path + '/07_Medical_code_consistency.csv')
   print(f'{medical_code_consistency:.3f}\n')
 
