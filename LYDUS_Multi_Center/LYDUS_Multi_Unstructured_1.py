@@ -180,7 +180,7 @@ def main():
     if b1.empty:
         print('[결과 없음] 유효한 노트 유형이 없습니다.')
     else:
-        print(b1[['Note_type', 'CV_accuracy_mean', 'CV_accuracy_std', 'Interpretation']].to_string(index=False))
+        print(b1[['Note_type', 'CV_accuracy_mean', 'CV_accuracy_std']].to_string(index=False))
         b1.to_csv(cfg['out'], index=False, encoding='utf-8-sig')
         print(f'\n결과 저장 완료: {cfg["out"]}')
 
