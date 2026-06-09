@@ -89,8 +89,15 @@ def run_b2(note_df: pd.DataFrame, min_n_wd: int) -> pd.DataFrame:
             print(f'          {s2:<15}  건수={len(lb):>4}  최소={int(lb.min()):>6}자  중앙값={int(np.median(lb)):>6}자  평균={int(lb.mean()):>6}자  최대={int(lb.max()):>6}자')
 
             wd = wasserstein_distance(la, lb)
+            pooled_median = float(np.median(np.concatenate([la, lb])))
+            wd_normalized = round(wd / pooled_median, 4) if pooled_median > 0 else None
+
             print(f'  Step 2  Wasserstein distance = {wd:.1f}자')
             print(f'          해석: 평균적으로 {wd:.0f}자만큼 두 기관 노트 길이가 다름')
+            print(f'  Step 3  정규화 (WD / Pooled median length)')
+            print(f'          Pooled median length = {pooled_median:.1f}자  (두 기관 통합 분포의 중앙값)')
+            print(f'          WD / Pooled median   = {wd_normalized:.4f}  ({wd_normalized * 100:.2f}%)')
+            print(f'          해석: 두 기관의 길이 차이가 전체 노트 길이 대비 {wd_normalized * 100:.1f}% 수준')
 
             b2_rows.append({
                 'Note_type':            note_type,
@@ -101,6 +108,8 @@ def run_b2(note_df: pd.DataFrame, min_n_wd: int) -> pd.DataFrame:
                 'Median_A':             int(np.median(la)),
                 'Median_B':             int(np.median(lb)),
                 'Wasserstein_distance': round(wd, 2),
+                'Median_pooled':        round(pooled_median, 2),
+                'WD_normalized':        wd_normalized,
             })
 
     return pd.DataFrame(b2_rows)
@@ -139,7 +148,7 @@ def main():
         print('[결과 없음] 유효한 노트 유형이 없습니다.')
     else:
         print(b2[['Note_type', 'Site_A', 'Site_B', 'Median_A', 'Median_B',
-                   'Wasserstein_distance', 'Interpretation']].to_string(index=False))
+                   'Wasserstein_distance', 'Median_pooled', 'WD_normalized']].to_string(index=False))
         b2.to_csv(cfg['out_b2'], index=False, encoding='utf-8-sig')
         print(f'\n결과 저장 완료: {cfg["out_b2"]}')
 
