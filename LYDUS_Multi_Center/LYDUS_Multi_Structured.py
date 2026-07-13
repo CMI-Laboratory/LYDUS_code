@@ -3,6 +3,7 @@ import numpy as np
 import openai
 import json
 import re
+import random
 import argparse
 import yaml
 from scipy.stats import ks_2samp, wasserstein_distance
@@ -1171,10 +1172,10 @@ if __name__ == '__main__' :
   print('Structured 07 - Medical Code Consistency')
   df_A_medical_code = quiq_a.loc[quiq_a['Mapping_info_1'] == 'medical_code'].copy()
   df_B_medical_code = quiq_b.loc[quiq_b['Mapping_info_1'] == 'medical_code'].copy()
-  variable_summary_df, consistency_df = run_pipeline_medical_code(df_A, df_B, via_A, via_B, client, model, sample_n=50)
+  variable_summary_df, consistency_df = run_pipeline_medical_code(df_A_medical_code, df_B_medical_code, via_A, via_B, client, model_ver, sample_n=50)
   medical_code_consistency = (1 - consistency_df['Is_mismatch'].mean()) * 100
   variable_summary_df.reset_index(drop = True).to_csv(save_path + '/07_Medical_code_consistency_detail.csv')
-  merged_sem.reset_index(drop = True).to_csv(save_path + '/07_Medical_code_consistency.csv')
+  consistency_df.reset_index(drop = True).to_csv(save_path + '/07_Medical_code_consistency.csv')
   print(f'{medical_code_consistency:.3f}\n')
 
   with open(save_path + '/LYDUS_multi_structured_total_results.txt', 'w', encoding = 'utf-8') as file :
