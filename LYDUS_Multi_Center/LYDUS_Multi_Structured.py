@@ -1130,20 +1130,20 @@ if __name__ == '__main__' :
   pair_df = pair_df.drop_duplicates(subset = 'B_var_name', keep = 'first')
   
   variable_name_consistency = (1- pair_df['Is_hetero'].mean()) * 100
-  pair_df.reset_index(drop = True).to_csv(save_path + '/01_Variable_name_consistency.csv')
+  pair_df.reset_index(drop = True).to_csv(save_path + '/01_Variable_name_consistency.csv', index = False)
   print(f'{variable_name_consistency:.3f}\n')
 
   print('Structured 02 - Categorical Value Consistency')
   df_surface = compute_surface_mismatch_from_pairs(df_A_categorical, df_B_categorical, pair_df_categorical, client, model_ver)
   categorical_value_consistency = df_surface['surface_match_rate'].mean()
-  df_surface.reset_index(drop = True).to_csv(save_path  + '/02_Categorical_value_consistency.csv')
+  df_surface.reset_index(drop = True).to_csv(save_path  + '/02_Categorical_value_consistency.csv', index = False)
   print(f'{categorical_value_consistency:.3f}\n')
 
   print('Structured 03 - Categorical Variable Distribution Homogeneity')
   df_cat_dist = compute_categorical_distribution_heterogeneity(df_A_categorical, df_B_categorical, df_surface)
   categorical_variable_distribution_mean = df_cat_dist['js_divergence'].mean()
   categorical_variable_distribution_std = df_cat_dist['js_divergence'].std()
-  df_cat_dist.reset_index(drop = True).to_csv(save_path  + '/03_Categorical_value_distribution_homogeneity.csv')
+  df_cat_dist.reset_index(drop = True).to_csv(save_path  + '/03_Categorical_value_distribution_homogeneity.csv', index = False)
   print(f'mean: {categorical_variable_distribution_mean:.3f}\n')
   print(f'std: {categorical_variable_distribution_std:.3f}\n')
 
@@ -1151,7 +1151,7 @@ if __name__ == '__main__' :
   merged_dist = compute_continuous_variable_distribution_homogeniety(df_A_continuous, df_B_continuous, pair_df_continuous)
   continuous_variable_distribution_mean = merged_dist['wd_normalized'].mean()
   continuous_variable_distribution_std = merged_dist['wd_normalized'].std()
-  merged_dist.reset_index(drop = True).to_csv(save_path  + '/04_Continuous_variable_distribution_homogeniety.csv')
+  merged_dist.reset_index(drop = True).to_csv(save_path  + '/04_Continuous_variable_distribution_homogeniety.csv', index = False)
   print(f'mean: {continuous_variable_distribution_mean:.3f}\n')
   print(f'std: {continuous_variable_distribution_std:.3f}\n')
 
@@ -1159,14 +1159,14 @@ if __name__ == '__main__' :
   merged_dist_2 = compute_continuous_variable_distribution_shape_consistency(df_A_continuous, df_B_continuous, pair_df_continuous)
   continuous_variable_distribution_shape_mean = merged_dist_2['shape_distance'].mean()
   continuous_variable_distribution_shape_std = merged_dist_2['shape_distance'].std()
-  merged_dist_2.reset_index(drop = True).to_csv(save_path + '/05_Continuous_variable_distribution_shape_consistency.csv')
+  merged_dist_2.reset_index(drop = True).to_csv(save_path + '/05_Continuous_variable_distribution_shape_consistency.csv', index = False)
   print(f'mean: {continuous_variable_distribution_shape_mean:.3f}\n')
   print(f'std: {continuous_variable_distribution_shape_std:.3f}\n')
 
   print('Structured 06 - Measurement Unit Consistency')
   result_unit = compute_measurement_unit_consistency(df_A_unit, df_B_unit, pair_df_unit)
   measurement_unit_consistency = (1 - result_unit['is_mixed'].mean()) * 100
-  result_unit.reset_index(drop = True).to_csv(save_path + '/06_Measurement_unit_consistency.csv')
+  result_unit.reset_index(drop = True).to_csv(save_path + '/06_Measurement_unit_consistency.csv', index = False)
   print(f'{measurement_unit_consistency:.3f}\n')
 
   print('Structured 07 - Medical Code Consistency')
@@ -1174,8 +1174,8 @@ if __name__ == '__main__' :
   df_B_medical_code = quiq_b.loc[quiq_b['Mapping_info_1'] == 'medical_code'].copy()
   variable_summary_df, consistency_df = run_pipeline_medical_code(df_A_medical_code, df_B_medical_code, via_a, via_b, client, model_ver, sample_n=50)
   medical_code_consistency = (1 - consistency_df['Is_mismatch'].mean()) * 100
-  variable_summary_df.reset_index(drop = True).to_csv(save_path + '/07_Medical_code_consistency_detail.csv')
-  consistency_df.reset_index(drop = True).to_csv(save_path + '/07_Medical_code_consistency.csv')
+  variable_summary_df.reset_index(drop = True).to_csv(save_path + '/07_Medical_code_consistency_detail.csv', index = False)
+  consistency_df.reset_index(drop = True).to_csv(save_path + '/07_Medical_code_consistency.csv', index = False)
   print(f'{medical_code_consistency:.3f}\n')
 
   with open(save_path + '/LYDUS_multi_structured_total_results.txt', 'w', encoding = 'utf-8') as file :
