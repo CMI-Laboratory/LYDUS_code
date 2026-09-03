@@ -7,7 +7,7 @@ import pandas as pd
 import numpy as np
 from collections import Counter
 import matplotlib.pyplot as plt
-from decimal import Decimal
+from decimal import Decimal, InvalidOpeartion
 
 def draw_histogram (save_path, idx, identifier, hist_values) :
     table_name, variable_name = identifier.split(' - ')
@@ -40,6 +40,15 @@ def _round_at_3(x):
 def _multiply_by(x, a):
     return x * (Decimal(10) ** a)
 
+def safe_decmial(v):
+    if pd.isna(v):
+        return np.nan
+
+    try:
+        return Decimal(str(v).strip())
+    except (InvalidOperation, ValueError):
+        return np.nan
+
 def get_preciseness(quiq:pd.DataFrame):    
     
     df = quiq.copy()
@@ -48,7 +57,7 @@ def get_preciseness(quiq:pd.DataFrame):
     
     df = df[df['Variable_type'].str.contains('numeric', case = False, na = False)]
     df = df[df['Is_categorical'] == 0]
-    df['Value'] = df['Value'].apply(lambda v: Decimal(str(v)) if pd.notna(v) else np.nan)
+    df['Value'] = df['Value'].apply(safe_decimal)
     df = df.dropna(subset = 'Value')
     df.reset_index(inplace=True,drop=True)
 
