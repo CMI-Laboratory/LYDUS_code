@@ -137,7 +137,10 @@ def run_full_pipeline(df_A, df_B, client, model):
   
     pair_df = run_llm_pair_matching(client, model, A_list, B_list)
 
-    result_df = build_result_dataframe(pair_df)
+    if pair_df.empty:
+      return pd.DataFrame(columns = ['A_var_name', 'B_var_name', 'Is_hetero'])
+    else:
+      result_df = build_result_dataframe(pair_df)
 
     return result_df
 
