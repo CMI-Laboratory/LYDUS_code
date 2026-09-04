@@ -354,6 +354,13 @@ def compute_categorical_distribution_heterogeneity(df_A, df_B, df_surface):
       ]['Value'].dropna().tolist()
 
       if len(VA) == 0 or len(VB) == 0:
+          results.append({
+              "A_var_name": var_A,
+              "B_var_name": var_B,
+              "A_dist": {},
+              "B_dist": {},
+              "js_divergence": np.nan
+          })
           continue
 
       value_to_cluster = build_value_to_cluster_from_surface(cluster_detail)
@@ -362,7 +369,15 @@ def compute_categorical_distribution_heterogeneity(df_A, df_B, df_surface):
       B_norm = [value_to_cluster[v] for v in VB if v in value_to_cluster]
 
       if len(A_norm) == 0 or len(B_norm) == 0:
-          continue
+          results.append({
+            "A_var_name": var_A,
+            "B_var_name": var_B,
+            "A_dist": {},
+            "B_dist": {},
+            "js_divergence": np.nan
+        })
+        continue
+
 
       common_categories = list(set(A_norm) & set(B_norm))
 
