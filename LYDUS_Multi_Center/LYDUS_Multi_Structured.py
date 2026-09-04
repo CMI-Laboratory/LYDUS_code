@@ -1126,8 +1126,7 @@ if __name__ == '__main__' :
   pair_df_unit = run_full_pipeline(df_A_unit, df_B_unit, client, model_ver)
 
   pair_df = pd.concat([pair_df_categorical, pair_df_continuous, pair_df_unit], axis = 0)
-  pair_df = pair_df.drop_duplicates(subset = 'A_var_name', keep = 'first')
-  pair_df = pair_df.drop_duplicates(subset = 'B_var_name', keep = 'first')
+  pair_df = pair_df.drop_duplicates(subset = ['A_var_name', 'B_var_name'], keep = 'first')
   
   variable_name_consistency = (1- pair_df['Is_hetero'].mean()) * 100
   pair_df.reset_index(drop = True).to_csv(save_path + '/01_Variable_name_consistency.csv', index = False)
