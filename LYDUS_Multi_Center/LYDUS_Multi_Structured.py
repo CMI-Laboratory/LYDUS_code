@@ -1171,7 +1171,7 @@ if __name__ == '__main__' :
     print(f'mean: {categorical_variable_distribution_mean:.3f}\n')
     print(f'std: {categorical_variable_distribution_std:.3f}\n')
 
-    with open(save_path + '/LYDUS_multi_structured_total_results.txt', 'w', encoding = 'utf-8') as file :
+    with open(save_path + '/LYDUS_multi_structured_total_results.txt', 'a', encoding = 'utf-8') as file :
       file.write(f'02 Categorical Value Consistency (%) = {categorical_value_consistency:.2f}\n')
       file.write(f'03 Categorical Variable Distribution Homogeneity - mean = {categorical_variable_distribution_mean:.2f}\n')
       file.write(f'03 Categorical Variable Distribution Homogeneity - std = {categorical_variable_distribution_std:.2f}\n')
@@ -1195,7 +1195,7 @@ if __name__ == '__main__' :
     print(f'mean: {continuous_variable_distribution_shape_mean:.3f}\n')
     print(f'std: {continuous_variable_distribution_shape_std:.3f}\n')
 
-    with open(save_path + '/LYDUS_multi_structured_total_results.txt', 'w', encoding = 'utf-8') as file :
+    with open(save_path + '/LYDUS_multi_structured_total_results.txt', 'a', encoding = 'utf-8') as file :
       file.write(f'04 Continuous Variable Distribution Homogeneity - mean = {continuous_variable_distribution_mean:.2f}\n')
       file.write(f'04 Continuous Variable Distribution Homogeneity - std = {continuous_variable_distribution_std:.2f}\n')
       file.write(f'05 Continuous Variable Distribution Shape Consistency - mean = {continuous_variable_distribution_shape_mean:.2f}\n')
@@ -1210,7 +1210,7 @@ if __name__ == '__main__' :
     result_unit.reset_index(drop = True).to_csv(save_path + '/06_Measurement_unit_consistency.csv', index = False)
     print(f'{measurement_unit_consistency:.3f}\n')
 
-    with open(save_path + '/LYDUS_multi_structured_total_results.txt', 'w', encoding = 'utf-8') as file :
+    with open(save_path + '/LYDUS_multi_structured_total_results.txt', 'a', encoding = 'utf-8') as file :
           file.write(f'06 Measurement Unit Consistency (%) = {measurement_unit_consistency:.2f}\n')
 
   df_A_medical_code = quiq_a.loc[quiq_a['Mapping_info_1'] == 'medical_code'].copy()
@@ -1225,7 +1225,7 @@ if __name__ == '__main__' :
     consistency_df.reset_index(drop = True).to_csv(save_path + '/07_Medical_code_consistency.csv', index = False)
     print(f'{medical_code_consistency:.3f}\n')
 
-    with open(save_path + '/LYDUS_multi_structured_total_results.txt', 'w', encoding = 'utf-8') as file :
+    with open(save_path + '/LYDUS_multi_structured_total_results.txt', 'a', encoding = 'utf-8') as file :
       file.write(f'07 Medical Code Consistency (%) = {medical_code_consistency:.2f}')
 
   print('SUCCESS')
