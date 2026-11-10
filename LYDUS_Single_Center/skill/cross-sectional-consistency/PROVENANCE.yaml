@@ -1,0 +1,31 @@
+sources:
+  - description: QUIQ-format table (output of quiq skill) with categorical string variables. Input data originates from MIMIC-IV clinical database.
+    license: PhysioNet Credentialed Health Data License 1.5.0
+  - description: Variable Information Annotation (VIA) table providing natural-language descriptions per variable.
+    license: Internal
+
+created:
+  by: Lee Sungmin (이성민)
+  role: authoring
+  date: 2026-06-10
+
+reviews:
+  - by: TBD
+    date: TBD
+    scope: technical-accuracy
+    notes: >
+      Review LLM grouping quality on edge cases (medical codes, nationalities, numeric-looking strings).
+      Verify that inner consistency formula correctly captures canonical-form dominance.
+
+references:
+  - LYDUS 품질관리 프로그램 활용 가이드라인 (비공개 내부 문서)
+  - Original Python implementation: LYDUS_Cross_Sectional_Consistency.py (이성민 작성)
+  - OpenAI Chat Completions API: https://platform.openai.com/docs/api-reference/chat
+
+changelog:
+  - version: "1.0"
+    date: 2026-06-10
+    summary: >
+      Initial skill creation. Converted from standalone LYDUS_Cross_Sectional_Consistency.py.
+      Fixed: Is_categorical compared without pd.to_numeric() conversion in original (now fixed).
+      SQL conversion not applicable — LLM API call is the core computation.

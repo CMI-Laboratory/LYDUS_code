@@ -1,0 +1,33 @@
+sources:
+  - description: QUIQ-format table (output of quiq skill). Input data originates from MIMIC-IV clinical database containing unstructured clinical notes.
+    license: PhysioNet Credentialed Health Data License 1.5.0
+
+created:
+  by: Lee Sungmin (이성민)
+  role: authoring
+  date: 2026-06-10
+
+reviews:
+  - by: TBD
+    date: TBD
+    scope: technical-accuracy
+    notes: >
+      Verify that NN* POS filter correctly targets clinical nouns of interest.
+      Confirm coverage score formula (top X% of unique types → % of total occurrences) matches
+      original intent. Check NLTK tokenization behavior on clinical abbreviations.
+
+references:
+  - LYDUS 품질관리 프로그램 활용 가이드라인 (비공개 내부 문서)
+  - Original Python implementation: LYDUS_Vocabulary_Diversity.py (이성민 작성)
+  - Bird, S., Klein, E., & Loper, E. (2009). Natural Language Processing with Python. O'Reilly.
+
+changelog:
+  - version: "1.0"
+    date: 2026-06-10
+    summary: >
+      Initial skill creation. Python-only (no SQL — NLTK tokenization required).
+      Fixed SettingWithCopyWarning: df_note['TEXT_words'] assignment without .copy() → added .copy().
+      Replaced assert with graceful FAIL + empty return.
+      Clarified total_words variable reuse confusion → total_count / counter separated.
+      Added matplotlib.use('Agg') for headless environments.
+      Used os.path.join throughout. Added required=True to --config argparse.

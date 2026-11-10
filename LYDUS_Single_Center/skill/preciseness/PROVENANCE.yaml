@@ -1,0 +1,31 @@
+sources:
+  - description: QUIQ-format table (output of quiq skill). Input data originates from MIMIC-IV clinical database.
+    license: PhysioNet Credentialed Health Data License 1.5.0
+
+created:
+  by: Lee Sungmin (이성민)
+  role: authoring
+  date: 2026-06-10
+
+reviews:
+  - by: TBD
+    date: TBD
+    scope: technical-accuracy
+    notes: >
+      Verify that the decimal-scale detection loop (exp 3..−1, >99% divisibility threshold)
+      correctly identifies the effective decimal precision for typical MIMIC-IV lab values.
+      Confirm Decimal_num=-4 sentinel handling is intentional for integer-like variables.
+
+references:
+  - LYDUS 품질관리 프로그램 활용 가이드라인 (비공개 내부 문서)
+  - Original Python implementation: LYDUS_Preciseness.py (이성민 작성)
+  - Simpson, E.H. (1949). Measurement of Diversity. Nature, 163, 688.
+
+changelog:
+  - version: "1.0"
+    date: 2026-06-10
+    summary: >
+      Initial skill creation. Python-only (no SQL — iterative Decimal arithmetic required).
+      Fixed chained indexing SettingWithCopyWarning: totaltable['col'][i] assignment replaced
+      with row-dict list → pd.DataFrame(rows). Extracted _detect_decimal_scale() helper function
+      from inline loop. Used os.path.join throughout instead of string concatenation.

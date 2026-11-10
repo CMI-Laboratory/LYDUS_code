@@ -1,0 +1,31 @@
+sources:
+  - description: QUIQ-format table (output of quiq skill). Input data originates from MIMIC-IV or institution-specific clinical database.
+    license: PhysioNet Credentialed Health Data License 1.5.0
+
+created:
+  by: Lee Sungmin (이성민)
+  role: authoring
+  date: 2026-06-10
+
+reviews:
+  - by: TBD
+    date: TBD
+    scope: technical-accuracy
+    notes: >
+      Verify that the clinical score formula (Diagnostic + Procedure only, not all 6 categories)
+      matches the original LYDUS specification. Confirm radiology score parsing handles
+      all LLM response format variations (single vs multiple errors).
+
+references:
+  - LYDUS 품질관리 프로그램 활용 가이드라인 (비공개 내부 문서)
+  - Original Python implementation: LYDUS_Note_Accuracy.py (이성민 작성)
+
+changelog:
+  - version: "1.0"
+    date: 2026-06-10
+    summary: >
+      Initial skill creation. Python-only (no SQL — LLM required).
+      Refactored duplicated api_call/process_rows inner functions into shared
+      _call_api_threaded and _process_notes helpers. Removed mutable default
+      argument anti-pattern (results=[]). Renamed get_unstructured_accuracy
+      to get_note_accuracy for consistency with skill name.

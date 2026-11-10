@@ -1,0 +1,28 @@
+sources:
+  - description: QUIQ-format table (output of quiq skill) with Ground_truth labels. Input data originates from MIMIC-IV clinical database.
+    license: PhysioNet Credentialed Health Data License 1.5.0
+
+created:
+  by: Lee Sungmin (이성민)
+  role: authoring
+  date: 2026-06-10
+
+reviews:
+  - by: TBD
+    date: TBD
+    scope: technical-accuracy
+    notes: Review for correctness of AUROC calculation (binary vs multiclass OvR), macro-average metric choices, and weighted aggregation logic.
+
+references:
+  - LYDUS 품질관리 프로그램 활용 가이드라인 (비공개 내부 문서)
+  - Fawcett, T. (2006). An introduction to ROC analysis. Pattern Recognition Letters, 27(8), 861-874.
+  - Original Python implementation: LYDUS_Classification.py (이성민 작성)
+
+changelog:
+  - version: "1.0"
+    date: 2026-06-10
+    summary: >
+      Initial skill creation. Python script (scripts/classification.py) converted from
+      standalone LYDUS_Classification.py. Calculates Accuracy, Precision, Recall, F1,
+      AUROC per (Original_table_name, Variable_name) group. Generates confusion matrix
+      and ROC curve plots per variable. sklearn-based; DuckDB SQL conversion not applicable.

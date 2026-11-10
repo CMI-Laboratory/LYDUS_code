@@ -1,0 +1,34 @@
+sources:
+  - description: QUIQ-format table (output of quiq skill). Input data originates from MIMIC-IV clinical database.
+    license: PhysioNet Credentialed Health Data License 1.5.0
+
+created:
+  by: Lee Sungmin (이성민)
+  role: authoring
+  date: 2026-06-10
+
+reviews:
+  - by: TBD
+    date: TBD
+    scope: technical-accuracy
+    notes: >
+      Verify that the all-three-models-agree criterion correctly reduces false positives
+      vs the original implementation. Confirm early stopping patience=5 and min_delta=1e-3
+      match intended behavior. Validate that the clinical context window (±7 days, closest value)
+      is the same as LYDUS_Logical_Accuracy.py.
+
+references:
+  - LYDUS 품질관리 프로그램 활용 가이드라인 (비공개 내부 문서)
+  - Original Python implementation: LYDUS_Logical_Accuracy.py (이성민 작성)
+  - Liu FT, Ting KM, Zhou Z-H. Isolation Forest. ICDM 2008.
+  - Schölkopf B et al. Estimating the Support of a High-Dimensional Distribution. Neural Computation, 2001.
+
+changelog:
+  - version: "1.0"
+    date: 2026-06-10
+    summary: >
+      Initial skill creation. Python-only (no SQL — LLM + ML models required).
+      Fixed missing comma bug: 'Outlier Num' 'Logical Accuracy (%)' → separate columns.
+      Cleaned up original 698-line file: extracted helper functions (llm_ask_sex,
+      llm_ask_birthdate, llm_ask_recommend, _train_autoencoder), standardized Autoencoder
+      as nn.Module, added YAML config support via argparse.

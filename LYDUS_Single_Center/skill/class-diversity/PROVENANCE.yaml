@@ -1,0 +1,29 @@
+sources:
+  - description: QUIQ-format table (output of quiq skill). Input data originates from MIMIC-IV clinical database.
+    license: PhysioNet Credentialed Health Data License 1.5.0
+
+created:
+  by: Lee Sungmin (이성민)
+  role: authoring
+  date: 2026-06-10
+
+reviews:
+  - by: TBD
+    date: TBD
+    scope: technical-accuracy
+    notes: Review for alignment with LYDUS class diversity guideline and correctness of Simpson/Shannon diversity calculations
+
+references:
+  - LYDUS 품질관리 프로그램 활용 가이드라인 (비공개 내부 문서)
+  - Simpson, E.H. (1949). Measurement of Diversity. Nature, 163, 688.
+  - Original Python implementation: class_diversity.py (이성민 작성)
+
+changelog:
+  - version: "1.0"
+    date: 2026-06-10
+    summary: >
+      Initial skill creation. Python script (scripts/class_diversity.py) converted from
+      standalone class_diversity.py. Filters categorical variables from QUIQ table,
+      calculates Simpson/Shannon diversity per (Original_table_name, Variable_name) group.
+      Fixed column name mismatch: draw_diversity_box_plot now uses 'Class_diversity (%)'
+      consistent with get_class_diversity output.

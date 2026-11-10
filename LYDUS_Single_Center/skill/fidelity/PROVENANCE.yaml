@@ -1,0 +1,28 @@
+sources:
+  - description: QUIQ-format table (output of quiq skill). Input data originates from MIMIC-IV clinical database.
+    license: PhysioNet Credentialed Health Data License 1.5.0
+
+created:
+  by: Lee Sungmin (이성민)
+  role: authoring
+  date: 2026-06-10
+
+reviews:
+  - by: TBD
+    date: TBD
+    scope: technical-accuracy
+    notes: >
+      Verify STDDEV(Frequency) in DuckDB matches pandas std(ddof=1).
+      Confirm Event category correctly excludes Is_categorical filter.
+
+references:
+  - LYDUS 품질관리 프로그램 활용 가이드라인 (비공개 내부 문서)
+  - Original Python implementation: LYDUS_Fidelity.py (이성민 작성)
+
+changelog:
+  - version: "1.0"
+    date: 2026-06-10
+    summary: >
+      Initial skill creation. DuckDB SQL (scripts/duckdb.sql) fully replaces Python logic
+      using UNION ALL of 4 category CTEs. Python version (scripts/fidelity.py) retained as
+      fallback. Fixed: Is_categorical comparison now uses pd.to_numeric / TRY_CAST.

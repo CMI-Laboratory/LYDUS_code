@@ -1,0 +1,29 @@
+sources:
+  - description: QUIQ-format table (output of quiq skill). Input data originates from MIMIC-IV clinical database.
+    license: PhysioNet Credentialed Health Data License 1.5.0
+
+created:
+  by: Lee Sungmin (이성민)
+  role: authoring
+  date: 2026-06-10
+
+reviews:
+  - by: TBD
+    date: TBD
+    scope: technical-accuracy
+    notes: >
+      Verify TRY_STRPTIME format coverage matches dateutil.parse behavior.
+      Confirm Korean date regex handles edge cases (e.g. single-digit months without zero-padding).
+
+references:
+  - LYDUS 품질관리 프로그램 활용 가이드라인 (비공개 내부 문서)
+  - Original Python implementation: LYDUS_Date_Validity.py (이성민 작성)
+
+changelog:
+  - version: "1.0"
+    date: 2026-06-10
+    summary: >
+      Initial skill creation. Added DuckDB SQL version (scripts/duckdb.sql) covering
+      standard format validation without LLM. Python version (scripts/date_validity.py)
+      retains LLM fallback with api_key=None option to disable it.
+      Fixed bug: original _gpt_chat result was a list but 'in' check treated it as string.

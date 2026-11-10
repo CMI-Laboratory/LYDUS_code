@@ -1,0 +1,32 @@
+sources:
+  - description: QUIQ-format table (output of quiq skill). Input data originates from MIMIC-IV or institution-specific clinical database.
+    license: PhysioNet Credentialed Health Data License 1.5.0
+
+created:
+  by: Lee Sungmin (이성민)
+  role: authoring
+  date: 2026-06-10
+
+reviews:
+  - by: TBD
+    date: TBD
+    scope: technical-accuracy
+    notes: >
+      Verify that the fidelity score formula (1 - not_mentioned/total) correctly matches
+      the original LYDUS specification for both clinical (regex-based) and radiology
+      (newline-based) parsing. Confirm that template items match official LYDUS guidelines.
+
+references:
+  - LYDUS 품질관리 프로그램 활용 가이드라인 (비공개 내부 문서)
+  - Original Python implementation: LYDUS_Note_Fidelity.py (이성민 작성)
+
+changelog:
+  - version: "1.0"
+    date: 2026-06-10
+    summary: >
+      Initial skill creation. Python-only (no SQL — LLM required).
+      Refactored duplicated process_row/retry_process_row inner functions into shared
+      _call_with_retry helper. Fixed typos in clinical templates: 'Present ilness' →
+      'Present illness', 'Familty history' → 'Family history', 'Physical exammination' →
+      'Physical examination'. Moved template/mapping dicts to module-level constants.
+      Renamed get_unstructured_fidelity to get_note_fidelity for consistency with skill name.

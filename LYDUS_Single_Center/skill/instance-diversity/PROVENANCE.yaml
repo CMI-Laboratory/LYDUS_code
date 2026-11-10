@@ -1,0 +1,31 @@
+sources:
+  - description: QUIQ-format table (output of quiq skill). Input data originates from MIMIC-IV clinical database.
+    license: PhysioNet Credentialed Health Data License 1.5.0
+
+created:
+  by: Lee Sungmin (이성민)
+  role: authoring
+  date: 2026-06-10
+
+reviews:
+  - by: TBD
+    date: TBD
+    scope: technical-accuracy
+    notes: >
+      Verify that prob = patient_count / total_num matches the Python implementation
+      (Counter gives occurrence-count groups, not individual patients).
+      Confirm weighted average uses total_num (occurrences) not num_patients.
+
+references:
+  - LYDUS 품질관리 프로그램 활용 가이드라인 (비공개 내부 문서)
+  - Original Python implementation: LYDUS_Instance_Diversity.py (이성민 작성)
+  - Simpson, E.H. (1949). Measurement of Diversity. Nature, 163, 688.
+
+changelog:
+  - version: "1.0"
+    date: 2026-06-10
+    summary: >
+      Initial skill creation. DuckDB SQL (scripts/duckdb.sql) fully replaces Python logic
+      via 5-CTE pipeline. Python version (scripts/instance_diversity.py) retained as fallback.
+      Fixed typo: 'Diveristy' → 'Diversity' in output file key.
+      Fixed: weighted average now handles None values (replaced with 0).

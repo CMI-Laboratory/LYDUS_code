@@ -1,0 +1,32 @@
+sources:
+  - description: QUIQ-format table (output of quiq skill). Input data originates from MIMIC-IV clinical database.
+    license: PhysioNet Credentialed Health Data License 1.5.0
+
+created:
+  by: Lee Sungmin (이성민)
+  role: authoring
+  date: 2026-06-10
+
+reviews:
+  - by: TBD
+    date: TBD
+    scope: technical-accuracy
+    notes: >
+      Verify that IQR pooling across tables (Variable_name only, not Original_table_name)
+      is intentional per LYDUS specification. Confirm PERCENTILE_CONT in DuckDB SQL
+      matches numpy.percentile behavior (linear interpolation).
+
+references:
+  - LYDUS 품질관리 프로그램 활용 가이드라인 (비공개 내부 문서)
+  - Original Python implementation: LYDUS_Range_Validity.py (이성민 작성)
+  - Tukey, J.W. (1977). Exploratory Data Analysis. Addison-Wesley.
+
+changelog:
+  - version: "1.0"
+    date: 2026-06-10
+    summary: >
+      Initial skill creation. DuckDB SQL (scripts/duckdb.sql) added using PERCENTILE_CONT
+      for IQR computation. Python version (scripts/range_validity.py) retained for
+      boxplot visualization and outlier CSV export. Fixed chained indexing and bare except.
+      Row-dict pattern replaces summary_df.loc[len()] assignment. weight parameter
+      externalized (original hardcoded 1.5).

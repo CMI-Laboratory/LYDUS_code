@@ -1,0 +1,32 @@
+sources:
+  - description: QUIQ-format table (output of quiq skill) targeting medical_code rows. Input data originates from MIMIC-IV clinical database.
+    license: PhysioNet Credentialed Health Data License 1.5.0
+  - description: Variable Information Annotation (VIA) table providing natural-language descriptions per variable.
+    license: Internal
+
+created:
+  by: Lee Sungmin (이성민)
+  role: authoring
+  date: 2026-06-10
+
+reviews:
+  - by: TBD
+    date: TBD
+    scope: technical-accuracy
+    notes: >
+      Verify regex patterns match real-world code formats (especially ICD-11 and SNOMED-CT edge cases).
+      Confirm integer-float conversion (4019.0 → '4019') handles all numeric code representations.
+
+references:
+  - LYDUS 품질관리 프로그램 활용 가이드라인 (비공개 내부 문서)
+  - Original Python implementation: LYDUS_Format_Validity.py (이성민 작성)
+
+changelog:
+  - version: "1.0"
+    date: 2026-06-10
+    summary: >
+      Initial skill creation. DuckDB SQL version (scripts/duckdb.sql) implements rule-based
+      code type detection via CASE WHEN + regexp_matches(). Python version (scripts/format_validity.py)
+      retains LLM fallback with api_key=None option.
+      Fixed: original aggregation used 'Invalid_code' to store valid count — renamed to Valid_code
+      for clarity, then computed Invalid_code = Total - Valid.

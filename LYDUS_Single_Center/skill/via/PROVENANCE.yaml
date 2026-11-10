@@ -1,0 +1,26 @@
+sources:
+  - description: QUIQ-format table (output of quiq skill). Input data originates from MIMIC-IV clinical database.
+    license: PhysioNet Credentialed Health Data License 1.5.0
+
+created:
+  by: Lee Sungmin (이성민)
+  role: authoring
+  date: 2026-06-21
+
+reviews:
+  - by: TBD
+    date: TBD
+    scope: technical-accuracy
+    notes: Verify that LLM-generated descriptions are accurate for MIMIC-IV variable semantics.
+
+references:
+  - LYDUS 품질관리 프로그램 활용 가이드라인 (비공개 내부 문서)
+  - VIA 개념 정의: 스크린샷 기반 설계 (이성민, 2026-06-21)
+
+changelog:
+  - version: "1.0"
+    date: 2026-06-21
+    summary: >
+      Initial skill creation. Generates VIA (Variable Information Archive) from QUIQ
+      using Claude CLI subprocess per (Original_table_name, Variable_name) pair.
+      Output CSV consumed by format-validity, cross-sectional-consistency, bias-detection.

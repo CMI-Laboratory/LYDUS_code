@@ -1,0 +1,27 @@
+sources:
+  - description: QUIQ-format table (output of quiq skill). Input data originates from MIMIC-IV clinical database.
+    license: PhysioNet Credentialed Health Data License 1.5.0
+
+created:
+  by: Lee Sungmin (이성민)
+  role: authoring
+  date: 2026-06-10
+
+reviews:
+  - by: TBD
+    date: TBD
+    scope: technical-accuracy
+    notes: Verify that empty string values are intentionally treated as non-null (not a bug).
+
+references:
+  - LYDUS 품질관리 프로그램 활용 가이드라인 (비공개 내부 문서)
+  - Original Python implementation: LYDUS_Completeness.py (이성민 작성)
+
+changelog:
+  - version: "1.0"
+    date: 2026-06-10
+    summary: >
+      Initial skill creation. DuckDB SQL (scripts/duckdb.sql) and Python fallback
+      (scripts/completeness.py) converted from standalone LYDUS_Completeness.py.
+      SQL uses COUNT(Value) for non-null count, COUNT(*) for total — semantically
+      identical to Python groupby approach.

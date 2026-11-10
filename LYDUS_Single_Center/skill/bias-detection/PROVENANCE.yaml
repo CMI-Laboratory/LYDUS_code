@@ -1,0 +1,37 @@
+sources:
+  - description: QUIQ-format table (output of quiq skill) and VIA (Variable Information Annotation) CSV. Input data originates from MIMIC-IV clinical database.
+    license: PhysioNet Credentialed Health Data License 1.5.0
+
+created:
+  by: Lee Sungmin (이성민)
+  role: authoring
+  date: 2026-06-10
+
+reviews:
+  - by: TBD
+    date: TBD
+    scope: technical-accuracy
+    notes: >
+      Verify that GDI formula (max |group - mean|) matches intended definition.
+      Confirm Age bin boundaries are clinically appropriate.
+      Review that all 16 sub-metric return value adaptations are correct.
+      Check that sibling skill imports resolve correctly in both project and global skill paths.
+
+references:
+  - LYDUS 품질관리 프로그램 활용 가이드라인 (비공개 내부 문서)
+  - Original Python implementation: LYDUS_Bias_Detection.py (이성민 작성)
+
+changelog:
+  - version: "1.0"
+    date: 2026-06-10
+    summary: >
+      Initial skill creation. Python-only orchestrator (no SQL).
+      Bug fix: model_ver undefined variable in llm_ask_column calls → config['model_ver'].
+      Bug fix: get_time_series_consistency argument order reversed → (quiq, save_path).
+      Bug fix: get_code_validity returned 2 values but was unpacked as 3.
+      Adapted get_unstructured_fidelity → get_note_fidelity (8 return values).
+      Adapted get_unstructured_accuracy → get_note_accuracy.
+      Replaced hardcoded save_path=-1 with actual config save_path.
+      Dynamic sys.path injection for sibling skill imports.
+      Refactored 3x duplicate group-iteration loops into _run_groups helper.
+      Used os.path.join throughout. Added required=True to --config argparse.

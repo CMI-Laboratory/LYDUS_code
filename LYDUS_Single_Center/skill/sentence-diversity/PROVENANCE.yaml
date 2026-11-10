@@ -1,0 +1,32 @@
+sources:
+  - description: QUIQ-format table (output of quiq skill). Input data originates from MIMIC-IV or institution-specific clinical database containing free-text notes.
+    license: PhysioNet Credentialed Health Data License 1.5.0
+
+created:
+  by: Lee Sungmin (이성민)
+  role: authoring
+  date: 2026-06-10
+
+reviews:
+  - by: TBD
+    date: TBD
+    scope: technical-accuracy
+    notes: >
+      Verify that _custom_sent_tokenize regex correctly segments clinical note text
+      (double-newline and non-word splits). Confirm that verb-only filtering via
+      POS tag VB* matches intended behavior for Korean/mixed-language notes.
+
+references:
+  - LYDUS 품질관리 프로그램 활용 가이드라인 (비공개 내부 문서)
+  - Original Python implementation: LYDUS_Sentence_Diversity.py (이성민 작성)
+  - Bird, S., Klein, E., & Loper, E. (2009). Natural Language Processing with Python. O'Reilly.
+
+changelog:
+  - version: "1.0"
+    date: 2026-06-10
+    summary: >
+      Initial skill creation. Python-only (no SQL — NLTK POS tagging required).
+      Fixed SettingWithCopyWarning: df_note assigned after .copy(). Added NLTK
+      auto-download for punkt/punkt_tab and averaged_perceptron_tagger/eng.
+      Renamed _verb_sentence to _verb_sentences. Used os.path.join throughout.
+      Added required=True to --config argparse argument.

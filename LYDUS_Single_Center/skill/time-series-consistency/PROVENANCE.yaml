@@ -1,0 +1,33 @@
+sources:
+  - description: QUIQ-format table (output of quiq skill). Input data originates from MIMIC-IV clinical database spanning multiple years.
+    license: PhysioNet Credentialed Health Data License 1.5.0
+
+created:
+  by: Lee Sungmin (이성민)
+  role: authoring
+  date: 2026-06-10
+
+reviews:
+  - by: TBD
+    date: TBD
+    scope: technical-accuracy
+    notes: >
+      Verify that the Prescription filter fix (Mapping_info_2 contains 'drug' instead of
+      Mapping_info_1) is correct per QUIQ specification. Confirm AUROC >= 0.8 threshold
+      for change point is intentional. Review class imbalance threshold (min_class/total < 0.25).
+
+references:
+  - LYDUS 품질관리 프로그램 활용 가이드라인 (비공개 내부 문서)
+  - Original Python implementation: LYDUS_Time_Series_Consistency.py (이성민 작성)
+  - Lundberg, S.M., Lee, S-I. (2017). A Unified Approach to Interpreting Model Predictions. NeurIPS 2017.
+
+changelog:
+  - version: "1.0"
+    date: 2026-06-10
+    summary: >
+      Initial skill creation. Python-only (no SQL — sklearn + SHAP required).
+      Bug fix: Prescription filter changed from Mapping_info_1.str.contains('drug')
+      (always empty) to Mapping_info_2.str.contains('drug') (correct).
+      Refactored 4 duplicate category blocks into _run_category, _build_pivot_and_years,
+      _detect_change_points helpers. Fixed SettingWithCopyWarning on all filtered slices.
+      Used os.path.join throughout. Added required=True to --config argparse.
