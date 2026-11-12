@@ -19,7 +19,7 @@ This repository is part of the [LYDUS project](https://lydus.org/). It provides 
 | Folder | Purpose | Main contents |
 | --- | --- | --- |
 | [LYDUS_Single_Center](LYDUS_Single_Center/) | Quality assessment within a single healthcare dataset | Python metrics, YAML configurations, Agent Skills, and LLaMA 3 variants |
-| [LYDUS_Multi_Center](LYDUS_Multi_Center/) | Comparison of healthcare data across centers | Structured metrics 01–07 and unstructured metrics B-1/B-2 |
+| [LYDUS_Multi_Center](LYDUS_Multi_Center/) | Comparison of healthcare data across centers | Structured metrics 01–07, unstructured metrics B-1/B-2, and three Agent Skills |
 | [LYDUS_codes_to_QUIQ](LYDUS_codes_to_QUIQ/) | Examples of converting source data into QUIQ format and related agent guidance | Jupyter notebooks, QUIQ/VIA Agent Skills and references |
 
 **File types:** `*.py` = executable Python code · `*.yml` = configuration · `SKILL.md` = agent instructions · `PROVENANCE.yaml` = skill provenance metadata · `*.ipynb` = Jupyter notebook.
@@ -53,11 +53,11 @@ Each row links to the available Python implementation and YAML configuration. Th
 
 ### Structured data
 
-The structured script implements multiple comparison metrics in one Python file.
+The structured script implements multiple comparison metrics in one Python file. Scripts are stored under `LYDUS_Multi_Center/py/`, and configurations under `LYDUS_Multi_Center/yml/`.
 
 | Analysis | Python script | YAML configuration | What it evaluates |
 | --- | --- | --- | --- |
-| Structured 01–07 | [`LYDUS_Multi_Structured.py`](<LYDUS_Multi_Center/LYDUS_Multi_Structured.py>) | [`config_multi_structured.yml`](<LYDUS_Multi_Center/config_multi_structured.yml>) | Cross-center quality comparisons for structured data |
+| Structured 01–07 | [`LYDUS_Multi_Structured.py`](<LYDUS_Multi_Center/py/LYDUS_Multi_Structured.py>) | [`config_multi_structured.yml`](<LYDUS_Multi_Center/yml/config_multi_structured.yml>) | Cross-center quality comparisons for structured data |
 
 The structured script covers:
 
@@ -75,8 +75,8 @@ The structured script covers:
 
 | ID | Python script | YAML configuration | What it evaluates |
 | --- | --- | --- | --- |
-| B-1 | [`LYDUS_Multi_Unstructured_1.py`](<LYDUS_Multi_Center/LYDUS_Multi_Unstructured_1.py>) | [`config_multi_unstructured_1.yml`](<LYDUS_Multi_Center/config_multi_unstructured_1.yml>) | Note style distinguishability between centers (TF–IDF and classification). |
-| B-2 | [`LYDUS_Multi_Unstructured_2.py`](<LYDUS_Multi_Center/LYDUS_Multi_Unstructured_2.py>) | [`config_multi_unstructured_2.yml`](<LYDUS_Multi_Center/config_multi_unstructured_2.yml>) | Differences in note-length distributions (Wasserstein distance and normalized WD). |
+| B-1 | [`LYDUS_Multi_Unstructured_1.py`](<LYDUS_Multi_Center/py/LYDUS_Multi_Unstructured_1.py>) | [`config_multi_unstructured_1.yml`](<LYDUS_Multi_Center/yml/config_multi_unstructured_1.yml>) | Note style distinguishability between centers (TF–IDF and classification). |
+| B-2 | [`LYDUS_Multi_Unstructured_2.py`](<LYDUS_Multi_Center/py/LYDUS_Multi_Unstructured_2.py>) | [`config_multi_unstructured_2.yml`](<LYDUS_Multi_Center/yml/config_multi_unstructured_2.yml>) | Differences in note-length distributions (Wasserstein distance and normalized WD). |
 
 ## How to run
 
@@ -91,7 +91,7 @@ python LYDUS_Metric_Name.py --config config_metric_name.yml
 
 ## Agent Skills
 
-Agent Skills provide instructions and supporting resources for AI agents working with LYDUS. They are organized into three groups: **QUIQ/VIA**, **Single-center**, and **Multi-center**. This section brings all Skill locations together so they can be found without browsing individual folders.
+Agent Skills provide task-specific instructions and supporting resources for AI agents working with LYDUS. They are organized into three groups: **QUIQ/VIA (2 skills)**, **Single-center (18 skills)**, and **Multi-center (3 skills)**. They guide data preparation and quality assessment workflows; the associated scripts and execution environments are still needed for code-based analyses.
 
 ### Agent Skill overview
 
@@ -99,18 +99,19 @@ Agent Skills provide instructions and supporting resources for AI agents working
 | --- | --- | --- | --- |
 | QUIQ / VIA | Data preparation and representation guidance | [`LYDUS_codes_to_QUIQ/skill/`](LYDUS_codes_to_QUIQ/skill/) | Available |
 | Single-center | Metric-specific quality assessment instructions | [`LYDUS_Single_Center/skill/`](LYDUS_Single_Center/skill/) | 18 skills available |
-| Multi-center | Cross-center structured and unstructured data assessment | [`LYDUS_Multi_Center/`](LYDUS_Multi_Center/) | **Planned — Agent Skills to be added** |
+| Multi-center | Cross-center structured and unstructured data assessment | [`LYDUS_Multi_Center/skill/`](LYDUS_Multi_Center/skill/) | 3 skills available |
 
 ### QUIQ / VIA
+
+The QUIQ skill describes conversion of MIMIC-IV data into the QUIQ long-format table. The VIA skill generates variable descriptions using a QUIQ dataset and **user-provided documentation** (e.g., a data dictionary or schema document). The VIA skill requires that documentation as input.
 
 | Skill | Instructions | Supporting files |
 | --- | --- | --- |
 | QUIQ | [`SKILL.md`](LYDUS_codes_to_QUIQ/skill/quiq/SKILL.md) | [`PROVENANCE.yaml`](LYDUS_codes_to_QUIQ/skill/quiq/PROVENANCE.yaml) |
-| VIA | [`SKILL.md`](LYDUS_codes_to_QUIQ/skill/via/SKILL.md) | [`PROVENANCE.yaml`](LYDUS_codes_to_QUIQ/skill/via/PROVENANCE.yaml) · [MIMIC-IV reference](LYDUS_codes_to_QUIQ/skill/via/default_docs/mimic-iv.md) |
-
+| VIA | [`SKILL.md`](LYDUS_codes_to_QUIQ/skill/via/SKILL.md) | [`PROVENANCE.yaml`](LYDUS_codes_to_QUIQ/skill/via/PROVENANCE.yaml) 
 ### Single-center
 
-The following 18 Agent Skills correspond to the metrics in [Single-center quality metrics](#single-center-quality-metrics). Each Skill directory includes `SKILL.md` and `PROVENANCE.yaml`.
+The following 18 Agent Skills correspond to the metrics in [Single-center quality metrics](#single-center-quality-metrics). Each Skill directory includes `SKILL.md` and `PROVENANCE.yaml`. Requirements vary by metric; consult the linked instructions for data inputs, dependencies, and model/API requirements.
 
 | Metric | Skill instructions | Metric | Skill instructions |
 | --- | --- | --- | --- |
@@ -126,7 +127,15 @@ The following 18 Agent Skills correspond to the metrics in [Single-center qualit
 
 ### Multi-center
 
-Agent Skills for multi-center structured and unstructured quality assessment are **planned for a future update**. The current Python scripts and YAML configurations can be accessed in [Multi-center quality metrics](#multi-center-quality-metrics).
+The following three Agent Skills support cross-center quality assessment of structured and unstructured healthcare data. The corresponding Python scripts and YAML configurations are linked under [Multi-center quality metrics](#multi-center-quality-metrics).
+
+| Metric | Skill Instructions |
+| --- | --- |
+| Structured data (01–07) | [`SKILL.md`](LYDUS_Multi_Center/skill/multi-structured/SKILL.md) |
+| Unstructured data (B-1) | [`SKILL.md`](LYDUS_Multi_Center/skill/multi-unstructured-1/SKILL.md) |
+| Unstructured data (B-2) | [`SKILL.md`](LYDUS_Multi_Center/skill/multi-unstructured-2/SKILL.md) |
+
+**Note:** These skills describe workflows and required inputs. Review configuration settings and the current scripts before execution.
 
 ## QUIQ conversion examples
 
